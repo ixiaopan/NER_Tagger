@@ -1,13 +1,19 @@
+"""
+Split raw dataset  into train(70%), valid(10%), and test(20%) data set
+"""
+
 import os
 import csv
 import numpy as np
-from numpy.lib.npyio import save
+import argparse
 
-def load_ner_data(filename='./data/kaggle/ner_dataset.csv'):
-  msg = filename + 'not found.'
+from utils import utils
+
+def load_ner_data(filename=None, encoding='utf-8'):
+  msg = filename + ' is not found.'
   assert os.path.isfile(filename), msg
 
-  with open(filename, encoding='windows-1252') as f:
+  with open(filename, encoding=encoding) as f:
     csvreader = csv.reader(f, delimiter=',')
 
     corpus = []
@@ -34,8 +40,8 @@ def load_ner_data(filename='./data/kaggle/ner_dataset.csv'):
 
 
 def split_train_val_test(corpus, corpus_tag):
-  corpus = np.array(corpus)
-  corpus_tag = np.array(corpus_tag)
+  corpus = np.array(corpus, dtype=object)
+  corpus_tag = np.array(corpus_tag, dtype=object)
   
   total_len = len(corpus)
   train_cutoff = int(0.7 * total_len)
@@ -54,26 +60,29 @@ def split_train_val_test(corpus, corpus_tag):
 
 
 def save_dataset(X, y, filepath):
-  if not os.path.exists(filepath):
-    os.mkdir(filepath)
-
-  with open(os.path.join(filepath, 'sentences.txt'), 'w') as f:
-    for sent in X:
-      f.write('{}\n'.format(' '.join(sent)))
-
-  with open(os.path.join(filepath, 'labels.txt'), 'w') as f:
-    for sent in y:
-      f.write('{}\n'.format(' '.join(sent)))
+  utils.save_text(os.path.join(filepath, 'sentences.txt'), X, lambda s: ' '.join(s))
+  utils.save_text(os.path.join(filepath, 'labels.txt'), y, lambda s: ' '.join(s))
 
 
-if __name__ == '__main__':
-  print('=== Loading dataset ===')
-  corpus, corpus_tag = load_ner_data()
+def main(data_dir, filename, encoding):
+  print('=== Loading dataset from {} ==='.format(data_dir))
+  corpus, corpus_tag = load_ner_data(os.path.join(data_dir, filename), encoding)
   print('Total sentences, ', len(corpus))
   print('Total sentences tag, ', len(corpus_tag))
 
-  print('=== Save dataset ===')
+  print('=== Split & Save dataset ===')
   for name, X, y in split_train_val_test(corpus, corpus_tag):
-    save_dataset(X, y, './data/kaggle/' + name)
+    save_dataset(X, y, os.path.join(data_dir, name))
+    print(name, 'done')
 
-  print('=== Build dataset done===')
+  print('=== Build dataset done ===')
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--data_dir', default='./data/kaggle', help="Directory containing the dataset")
+parser.add_argument('--filename', default='ner_dataset.csv', help="filename")
+parser.add_argument('--encoding', default='windows-1252', help="encoding")
+
+if __name__ == '__main__':
+  args = parser.parse_args()
+  main(args.data_dir, args.filename, args.encoding)

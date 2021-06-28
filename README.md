@@ -2,9 +2,6 @@
 # Initialise Baseline BiLSTM + CRF using Pytorch
 
 
-## Data
-
-
 ## Virtual Environment
 ```bash
 # create workspace
@@ -12,6 +9,10 @@
 
 # activate workspace
 ~ source venv/bin/activate
+
+~ export PYTHONPATH="${PYTHONPATH}:/path/to/NER_Tagger"
+
+# ~ sys.path # check it out
 
 # leave the virtual env
 ~ deactivate
