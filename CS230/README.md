@@ -9,11 +9,14 @@
 # https://www.kaggle.com/abhinavwalia95/entity-annotated-corpus/data
 ~ sh download.sh
 
+# show help
+# python build_dataset/build_word_dict.py -h
+
 # split data into train, valid, and test dataset
-~ python build_dataset.py
+~ python build_dataset.py --data_dir data/kaggle
 
 # build vocabulary and word-id mapping
-~ python build_word_dict.py
+~ python build_word_dict.py --data_dir data/kaggle
 ```
 
 - train
@@ -32,7 +35,6 @@
 
 ```bash
 ~ python train.py --data_dir 'data/toy' --model_dir 'exper/'
-
 ~ python evaluate.py --data_dir 'data/toy' --model_dir 'exper/'
 ```
 

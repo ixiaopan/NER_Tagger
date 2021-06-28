@@ -1,5 +1,5 @@
 
-# Initialise Baseline BiLSTM + CRF using Pytorch
+# Multi-Domain Named Entity Recognition
 
 
 ## Virtual Environment
@@ -24,10 +24,6 @@
 ~ pip install -r requirements.txt
 ```
 
-## Model
-
-
-
 ## References
 
-- [Target Paper](https://github.com/glample/tagger)
+- [Multi-Domain Named Entity Recognition with Genre-Aware and Agnostic Inference](https://www.aclweb.org/anthology/2020.acl-main.750.pdf)

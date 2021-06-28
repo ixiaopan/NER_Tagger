@@ -1,15 +1,10 @@
-"""
-Split raw dataset  into train(70%), valid(10%), and test(20%) data set
-"""
-
 import os
 import csv
-import numpy as np
 import argparse
-
+import numpy as np
 from utils import utils
 
-def load_ner_data(filename=None, encoding='utf-8'):
+def load_ner_data(filename=None, encoding='windows-1252'):
   msg = filename + ' is not found.'
   assert os.path.isfile(filename), msg
 
@@ -39,30 +34,6 @@ def load_ner_data(filename=None, encoding='utf-8'):
     return corpus, corpus_tag
 
 
-def split_train_val_test(corpus, corpus_tag):
-  corpus = np.array(corpus, dtype=object)
-  corpus_tag = np.array(corpus_tag, dtype=object)
-  
-  total_len = len(corpus)
-  train_cutoff = int(0.7 * total_len)
-  valid_cutoff = int(0.8 * total_len)
-
-  rand_idx = np.random.permutation(total_len)
-  train_idx = rand_idx[:train_cutoff]
-  valid_idx = rand_idx[train_cutoff:valid_cutoff]
-  test_idx =  rand_idx[valid_cutoff:]
-
-  X_train, y_train = corpus[train_idx], corpus_tag[train_idx]
-  X_valid, y_valid = corpus[valid_idx], corpus_tag[valid_idx]
-  X_test, y_test = corpus[test_idx], corpus_tag[test_idx]
-
-  return [('train', X_train, y_train), ('valid', X_valid, y_valid), ('test', X_test, y_test)]
-
-
-def save_dataset(X, y, filepath):
-  utils.save_text(os.path.join(filepath, 'sentences.txt'), X, lambda s: ' '.join(s))
-  utils.save_text(os.path.join(filepath, 'labels.txt'), y, lambda s: ' '.join(s))
-
 
 def main(data_dir, filename, encoding):
   print('=== Loading dataset from {} ==='.format(data_dir))
@@ -70,12 +41,19 @@ def main(data_dir, filename, encoding):
   print('Total sentences, ', len(corpus))
   print('Total sentences tag, ', len(corpus_tag))
 
+
+
   print('=== Split & Save dataset ===')
-  for name, X, y in split_train_val_test(corpus, corpus_tag):
-    save_dataset(X, y, os.path.join(data_dir, name))
+  corpus = np.array(corpus, dtype=object)
+  corpus_tag = np.array(corpus_tag, dtype=object)
+  for name, X, y in utils.split_train_val_test(corpus, corpus_tag):
+    utils.save_text(os.path.join(data_dir, name, 'sentences.txt'), X, lambda s: ' '.join(s))
+    utils.save_text(os.path.join(data_dir, name, 'labels.txt'), y, lambda s: ' '.join(s))
     print(name, 'done')
 
+
   print('=== Build dataset done ===')
+
 
 
 parser = argparse.ArgumentParser()
