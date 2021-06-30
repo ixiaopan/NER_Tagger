@@ -3,8 +3,9 @@ toolbox
 """
 
 import os
-from os import path
+from os import error, path
 import json
+import csv
 import string
 import numpy as np
 from collections import Counter
@@ -192,7 +193,6 @@ def build_ner_profile(data_dir, min_word_freq=1, min_tag_freq=1):
 
   # step 5: log metadata
   print('\n'.join(['{}: {}'.format(k, v) for k, v in data_statistics.items()]))
-  print('=== Build vocabulary done ===')
 
 
 
@@ -238,6 +238,37 @@ def convert_ner_dataset_to_fixed_id(data_dir, name, seq_n):
     padding_labels[i][:cutoff] = tags[i]
 
   return padding_sentences, padding_labels
+
+
+def load_ner_data(filename=None, encoding="utf8"):
+  msg = filename + ' is not found.'
+  assert os.path.isfile(filename), msg
+
+  with open(filename, encoding=encoding) as f:
+    csvreader = csv.reader(f, delimiter=',')
+
+    corpus = []
+    corpus_tag = []
+    sentence = []
+    sentence_tag = []
+    for index, row in enumerate(csvreader):
+      if index == 0: # header
+        continue
+
+      sentence_flag, word, pos, chunk_tag = row
+
+      if len(sentence_flag) > 0: # start from a new sentence        
+        sentence = []
+        sentence_tag = []
+
+        corpus.append(sentence)
+        corpus_tag.append(sentence_tag)
+
+      sentence.append(word)
+      sentence_tag.append(chunk_tag)
+
+    return corpus, corpus_tag
+
 
 
 

@@ -6,25 +6,21 @@
 ```bash
 ~ cd BiLSTM
 
-# show help
-# python build_dataset/build_word_dict.py -h
-
 # split data into train, valid, and test dataset
-~ python build_onto_dataset.py
+~ sh preprocess.sh
 
-# build vocabulary and word-id mapping
-~ python build_word_dict.py --data_dir data/kaggle
 ```
 
-- train
-  - sentences.txt
-  - labels.txt
-- valid
-  - sentences.txt
-  - labels.txt
-- test
-  - sentences.txt
-  - labels.txt
+- bc
+  - train
+    - sentences.txt
+    - labels.txt
+  - valid
+    - sentences.txt
+    - labels.txt
+  - test
+    - sentences.txt
+    - labels.txt
 
 
 
