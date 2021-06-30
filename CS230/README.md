@@ -1,7 +1,7 @@
 
 # Re-implement CS230 NER
 
-## Data
+## Data Preprocessing
 
 ```bash
 ~ cd CS230
@@ -35,9 +35,9 @@
 
 ```bash
 ~ python train.py --data_dir 'data/toy' --model_dir 'exper/'
+
 ~ python evaluate.py --data_dir 'data/toy' --model_dir 'exper/'
 ```
-
 
 
 ## References

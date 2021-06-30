@@ -1,0 +1,8 @@
+{
+  "learning_rate": 1e-3,
+  "batch_size": 3,
+  "epoches": 5,
+  "hidden_dim": 50,
+  "embed_dim": 45,
+  "log_batch": 2
+}
