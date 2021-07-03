@@ -64,16 +64,22 @@ def accuracy(outpus, labels):
   
   return (torch.sum(outputs == labels) / torch.sum(mask) * 100).item()
 
-def precision():
+
+
+def precision(outpus, labels):
+  pass
+
+
+def reacll(outpus, labels):
   pass
 
 
 
-def f1_score():
+def f1_score(outpus, labels):
   pass
+
 
 
 metrics_func = {
   'accuracy': accuracy
 }
-

@@ -1,8 +1,12 @@
 {
-  "learning_rate": 1e-3,
-  "batch_size": 1,
   "epoches": 10,
+  "dropout": 0.5,
+  "batch_size": 1,
+  "learning_rate": 1e-3,
+  
   "hidden_dim": 50,
-  "word_embed_dim": 45,
-  "char_embed_dim": 45
+  "word_embed_dim": 100,
+
+  "char_embed_dim": 45,
+  "char_hidden_dim": 45
 }

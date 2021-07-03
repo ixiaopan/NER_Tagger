@@ -10,7 +10,7 @@
 # activate workspace
 ~ source venv/bin/activate
 
-~ export PYTHONPATH="${PYTHONPATH}:/path/to/NER_Tagger"
+~ export PYTHONPATH="${PYTHONPATH}:/Users/wuxiaopan/work/NER_Tagger"
 
 # ~ sys.path # check it out
 

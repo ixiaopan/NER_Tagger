@@ -3,10 +3,10 @@ toolbox
 """
 
 import os
-from os import error, path
+import re
+from os import path
 import json
 import csv
-import string
 import numpy as np
 from collections import Counter
 
@@ -41,11 +41,13 @@ def save_json(filepath, text):
     json.dump(text, f, indent=4)
 
 
+
 def read_json(filepath):
   with open(filepath, 'r') as f:
     data = json.load(f)
 
   return data
+
 
 
 def split_train_val_test(corpus, corpus_tag, shuffle=True):
@@ -74,7 +76,6 @@ def split_train_val_test(corpus, corpus_tag, shuffle=True):
 
 
 
-
 def build_vocabulary(filename, word_counter=None):
   '''
   corpus: a list of sentence
@@ -98,6 +99,29 @@ def build_vocabulary(filename, word_counter=None):
 
 
 
+def build_char(filename, char_counter=None):
+  '''
+  corpus: a list of sentence
+  [
+    'the first sentence',
+    'the second sentence',
+  ]
+  
+  return:
+    - character counter
+    - the number of character
+  '''
+  if char_counter is None:
+    char_counter = Counter()
+  
+  with open(filename) as f:
+    chars = ''.join([''.join(line) for line in f.read().split('\n')])
+  
+  char_counter.update(chars)
+
+  return char_counter
+
+
 
 def map_word_id(word_list):
   word_id = {}
@@ -111,135 +135,30 @@ def map_word_id(word_list):
 
 
 
-
-def build_ner_profile(data_dir, min_word_freq=1, min_tag_freq=1):
+def zero_digit(s):
   '''
-  build vocabulary for ner task
+  replace each digit with a zero
   '''
-  PAD_CHAR = '_PAD' # fill the space for a sentence with unequal length
-  UNK_CHAR = '_UNK' # for word that is not present in the vocabulary
-  PAD_TAG = 'O'
-
-  data_statistics = {
-    'train_sentence_len': 0,
-    'valid_sentence_len': 0,
-    'test_sentence_len': 0,
-
-    'train_tag_sentence_len': 0,
-    'valid_tag_sentence_len': 0,
-    'test_tag_sentence_len': 0,
-
-    'vocab_size': 0,
-    'tag_size': 0,
-    'pad_word': PAD_CHAR,
-    'unk_word': UNK_CHAR,
-    'pad_tag': PAD_TAG,
-  }
-  
-  print('=== Build NER vocabulary from ', data_dir, ' ===' )
-  
-  # step 1
-  word_counter = Counter()
-  for name in ['train', 'valid', 'test']:
-    word_counter, sent_len = build_vocabulary(path.join(data_dir, name, 'sentences.txt'), word_counter)
-    data_statistics[name + '_sentence_len'] = sent_len
-
-  tag_counter = Counter()
-  for name in ['train', 'valid', 'test']:
-    tag_counter, tag_sent_len = build_vocabulary(path.join(data_dir, name, 'labels.txt'), tag_counter)
-    data_statistics[name + '_tag_sentence_len'] = tag_sent_len
-
-  # should have the same number of lines
-  for name in ['train', 'valid', 'test']:
-    assert data_statistics[name + '_sentence_len'] == data_statistics[name + '_tag_sentence_len']
+  return re.sub('\d', '0', s)
 
 
 
-  # step 2
-  vocab = [ w for w, c in word_counter.items() if c >= min_word_freq ]
-  tags = [ t for t, c in tag_counter.items() if c >= min_tag_freq ]
- 
-  if PAD_CHAR not in vocab:
-    vocab.append(PAD_CHAR)
-
-  if PAD_TAG not in tags:
-    tags.append(PAD_TAG)
-
-  vocab.append(UNK_CHAR)
-
-  data_statistics['vocab_size'] = len(vocab)
-  data_statistics['tag_size'] = len(tags)
-
-
-
-  # step 3
-  word_id, inverse_word_id = map_word_id(vocab)
-  tag_id, inverse_tag_id = map_word_id(tags)
-
-
-
-  # step 4 save meta data to file
-  save_text(path.join(data_dir, 'vocabulary.txt'), vocab)
-  save_text(path.join(data_dir, 'tags.txt'), tags)
-  
-  save_json(path.join(data_dir, 'word_id.json'), word_id)
-  save_json(path.join(data_dir, 'id_word.json'), inverse_word_id)
-  
-  save_json(path.join(data_dir, 'tag_id.json'), tag_id)
-  save_json(path.join(data_dir, 'inverse_tag_id.json'), inverse_tag_id)
-  
-  save_json(path.join(data_dir, 'dataset_params.json'), data_statistics)
-
-
-  # step 5: log metadata
-  print('\n'.join(['{}: {}'.format(k, v) for k, v in data_statistics.items()]))
-
-
-
-def convert_ner_dataset_to_fixed_id(data_dir, name, seq_n):
+def prepare_single_sentence(sent, word2id, char2id, unk_name='_UNK'):
   '''
-  convert each word to the corresponding id 
+  sentence 'He went to school'
   '''
-  data_stats = read_json(path.join(data_dir, 'dataset_params.json'))
-  word_id = read_json(path.join(data_dir, 'word_id.json'))
-  tag_id = read_json(path.join(data_dir, 'tag_id.json'))
-
-  sentences, tags = [], []
-  with open(path.join(data_dir, name, 'sentences.txt')) as f:
-    for line in f.read().split('\n'): # for each line
-      sent = []
-      for w in line.split(' '):
-        if w in word_id.keys():
-          sent.append(word_id[w])
-        else:
-          sent.append(word_id[data_stats['unk_word']])
-      sentences.append(sent)
-
-  with open(path.join(data_dir, name, 'labels.txt')) as f:
-    for line in f.read().split('\n'): # for each line
-      tag_line = [ tag_id[t] for t in line.split(' ') ]
-      tags.append(tag_line)
-
-
-  assert len(sentences) == len(tags)
-  for i in range(len(sentences)):
-    assert len(sentences[i]) == len(tags[i])
   
-  # padding, the whole dataset, it could be batch data
-  if not seq_n:
-    seq_n = max([ len(s) for s in sentences ])
+  words_id = [ word2id[w] if w in word2id.keys() else word2id[unk_name] for w in sent.split(' ')]
   
-  padding_sentences = word_id[data_stats['pad_word']] * np.ones((len(sentences), seq_n))
-  padding_labels = -1 * np.ones((len(sentences), seq_n)) # -1 indicates padding tokens
+  chars_id = [ 
+    [char2id[c] if c in char2id.keys() else char2id[unk_name] for c in w] 
+    for w in sent.split(' ')
+  ]
 
-  for i in range(len(padding_sentences)):
-    cutoff = len(sentences[i])
-    padding_sentences[i][:cutoff] = sentences[i]
-    padding_labels[i][:cutoff] = tags[i]
-
-  return padding_sentences, padding_labels
+  return words_id, chars_id
 
 
+# === NER specific ===
 def load_ner_data(filename=None, encoding="utf8"):
   msg = filename + ' is not found.'
   assert os.path.isfile(filename), msg
@@ -271,29 +190,233 @@ def load_ner_data(filename=None, encoding="utf8"):
 
 
 
-
-def build_ner_dataloader(
-  data_dir, names = ['train', 'valid', 'test'], 
-  seq_n = 0, batch_size = 1, shuffle=True, 
+def build_ner_profile(
+  data_dir, 
+  min_word_freq=1, 
+  use_pre_trained=False,
+  glove_word_dim=None, 
+  augment_vocab_from_glove=False, 
+  min_tag_freq=1
 ):
+  '''
+  build vocabulary for ner task,
+  data_dir: directory of each domain
+  '''
+  
+  PAD_CHAR = '_PAD' # fill the space for a sentence with unequal length
+  UNK_CHAR = '_UNK' # for word that is not present in the vocabulary
+  # PAD_TAG = 'O'
+  START_TAG = '_START_' # for state transition
+  STOP_TAG = '_STOP_'
+
+  data_statistics = {
+    'train_sentence_len': 0,
+    'valid_sentence_len': 0,
+    'test_sentence_len': 0,
+
+    'train_tag_sentence_len': 0,
+    'valid_tag_sentence_len': 0,
+    'test_tag_sentence_len': 0,
+
+    'vocab_size': 0,
+    'pad_word': PAD_CHAR,
+    'unk_word': UNK_CHAR,
+
+    'tag_size': 0,
+    'start_tag': START_TAG,
+    'stop_tag': STOP_TAG,
+    # 'pad_tag': PAD_TAG,
+
+    'char_size': 0,
+  }
+  
+  print('=== Build vocabulary from ', data_dir, ' ===' )
+  
+  # step 1
+  split = {}
+  # word_counter = Counter()
+  for name in ['train', 'valid', 'test']:
+    word_counter, sent_len = build_vocabulary(path.join(data_dir, name, 'sentences.txt'))
+    split[name + '_word_counter'] = word_counter
+    data_statistics[name + '_sentence_len'] = sent_len
+
+  # tag_counter = Counter()
+  for name in ['train', 'valid', 'test']:
+    tag_counter, tag_sent_len = build_vocabulary(path.join(data_dir, name, 'labels.txt'))
+    split[name + '_tag_counter'] = tag_counter
+    data_statistics[name + '_tag_sentence_len'] = tag_sent_len
+
+  # char_counter = Counter()
+  for name in ['train', 'valid', 'test']:
+    char_counter = build_char(path.join(data_dir, name, 'sentences.txt'))
+    split[name + '_char_counter'] = char_counter
+ 
+  # should have the same number of lines
+  for name in ['train', 'valid', 'test']:
+    assert data_statistics[name + '_sentence_len'] == data_statistics[name + '_tag_sentence_len']
+
+
+  # step 2
+  vocab = [ w for w, c in split['train_word_counter'].items() if c >= min_word_freq ]
+  tags = [ t for t, c in split['train_tag_counter'].items() if c >= min_tag_freq ]
+  chars = list(split['train_char_counter'].keys())
+ 
+  if PAD_CHAR not in vocab:
+    vocab.append(PAD_CHAR)
+
+  # if PAD_TAG not in tags:
+    # tags.append(PAD_TAG)
+
+  vocab.append(UNK_CHAR)
+  
+  chars.append(PAD_CHAR)
+  chars.append(UNK_CHAR)
+
+  tags.append(START_TAG)
+  tags.append(STOP_TAG)
+
+  # TODO: Why??
+  if use_pre_trained and glove_word_dim:
+    glove_path = './data/glove.6B/glove.6B.' + str(glove_word_dim) + 'd.txt' 
+    if not os.path.isfile(glove_path):
+      return print('File doesn\'t exist')
+
+    glove_words = {}
+    with open(glove_path, 'r', encoding="utf-8") as f:
+      for line in f:
+        value = line.split()
+        glove_words[value[0]] = value[1:]
+
+    if augment_vocab_from_glove: # option 1
+      split['train_word_counter'].update(glove_words.keys())
+    else: # option 2
+      for w in ((set(split['valid_word_counter'].keys()) - set(vocab)) | (set(split['test_word_counter'].keys()) - set(vocab))):
+        if w in glove_words.keys() or w.lower() in glove_words.keys() or re.sub('\d', '0', w.lower()) in glove_words.keys():
+          split['train_word_counter'].update([w])
+  
+    vocab = [ w for w, _ in split['train_word_counter'].items()]
+    
+
+  # step 3
+  data_statistics['vocab_size'] = len(vocab)
+  data_statistics['tag_size'] = len(tags)
+  data_statistics['char_size'] = len(chars)
+
+  word_id, inverse_word_id = map_word_id(vocab)
+  tag_id, inverse_tag_id = map_word_id(tags)
+  chars_id, inverse_chars_id = map_word_id(chars)
+
+
+  # save pre-trained word vector
+  if use_pre_trained and glove_word_dim:
+    pre_word_vector = np.zeros((len(vocab), glove_word_dim))
+    for w in vocab:
+      if w in glove_words.keys():
+        pre_word_vector[word_id[w]] = glove_words[w]
+
+      elif w.lower() in glove_words.keys():
+        pre_word_vector[word_id[w]] = glove_words[w.lower()]
+
+
+  # step 4 save meta data to file
+  save_text(path.join(data_dir, 'vocabulary.txt'), vocab)
+  save_text(path.join(data_dir, 'tags.txt'), tags)
+  
+  save_json(path.join(data_dir, 'word_id.json'), word_id)
+  save_json(path.join(data_dir, 'id_word.json'), inverse_word_id)
+  
+  save_json(path.join(data_dir, 'tag_id.json'), tag_id)
+  save_json(path.join(data_dir, 'inverse_tag_id.json'), inverse_tag_id)
+
+  save_json(path.join(data_dir, 'chars_id.json'), chars_id)
+  save_json(path.join(data_dir, 'inverse_chars_id.json'), inverse_chars_id)
+
+
+  if use_pre_trained and glove_word_dim:
+    np.save(path.join(data_dir, 'pre_word_embedding.npy'), pre_word_vector)
+
+
+  save_json(path.join(data_dir, 'dataset_params.json'), data_statistics)
+
+  # step 5: log metadata
+  print('\n'.join(['{}: {}'.format(k, v) for k, v in data_statistics.items()]))
+
+
+
+def convert_ner_dataset_to_id(data_dir, name):
+  '''
+  convert each word to the corresponding id 
+  '''
+  data_stats = read_json(path.join(data_dir, 'dataset_params.json'))
+
+  word_id = read_json(path.join(data_dir, 'word_id.json'))
+  tag_id = read_json(path.join(data_dir, 'tag_id.json'))
+  char_id = read_json(path.join(data_dir, 'char_id.json'))
+
+  sentences, tags, char_sent = [], [], []
+  with open(path.join(data_dir, name, 'sentences.txt')) as f:
+    for line in f.read().split('\n'): # for each line
+      char_sent.append([ 
+        [ char_id[c if c in char_id.keys() else data_stats['unk_word']] for c in w ] 
+        for w in line.split(' ') 
+      ])
+
+      sent = []
+      for w in line.split(' '):
+        if w in word_id.keys():
+          sent.append(word_id[w])
+        else:
+          sent.append(word_id[data_stats['unk_word']])
+      sentences.append(sent)
+
+
+  with open(path.join(data_dir, name, 'labels.txt')) as f:
+    for line in f.read().split('\n'): # for each line
+      tag_line = [ tag_id[t] for t in line.split(' ') ]
+      tags.append(tag_line)
+
+
+  assert len(sentences) == len(tags)
+  assert len(sentences) == len(char_sent)
+  for i in range(len(sentences)):
+    assert len(sentences[i]) == len(tags[i])
+  
+  return sentences, tags, char_sent
+  
+
+def build_onto_dataloader(data_dir, batch_size = 1, shuffle = True):
+  '''
+    designed for Ontonotes
+    data_dir: './data/bc/train'
+    Generator: 
+      (batch_sent, batch_chars, batch_labels)
+  '''
+  pass
+
+
+def build_ner_custom_dataloader(data_dir, names = ['train', 'valid', 'test'], batch_size = 1, shuffle = True):
     '''
+    designed for CS230
+    
     data_dir: directory containing the data set
     name: ['train', 'valid', 'test']
-    seq_n: fixed length of each sentence
+    
+    Generator: 
+      (batch_data, batch_labels)
     '''
 
     split = {}
-    for n in ['train', 'valid', 'test']:
-      if n in names:
-        sentences_ids, label_ids = convert_ner_dataset_to_fixed_id(data_dir, n, seq_n)
+    # for name in ['train', 'valid', 'test']:
+    #   if name in names:
+    #     sentences_ids, label_ids, char_ids = convert_ner_dataset_to_id(data_dir, name)
 
-        X, y = torch.LongTensor(sentences_ids), torch.LongTensor(label_ids)
+    #     X, y = torch.LongTensor(sentences_ids), torch.LongTensor(label_ids)
 
-        data_loader = DataLoader(TensorDataset(X, y), batch_size, shuffle)
+    #     data_loader = DataLoader(TensorDataset(X, y), batch_size, shuffle)
 
-        split[n] = data_loader
+    #     split[name] = data_loader
     
-    return split.values()
+    # return split.values()
 
 
 

@@ -34,9 +34,9 @@
 ## Model Training and Evaluation
 
 ```bash
-~ python train.py --data_dir 'data/toy' --model_dir 'exper/'
+~ python train.py --data_dir 'data/toy'
 
-~ python evaluate.py --data_dir 'data/toy' --model_dir 'exper/'
+~ python evaluate.py --data_dir 'data/toy'
 ```
 
 

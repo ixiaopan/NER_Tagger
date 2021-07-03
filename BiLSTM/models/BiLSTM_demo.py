@@ -1,9 +1,13 @@
-from numpy.lib.function_base import select
+"""
+Refererence 
+  - https://pytorch.org/tutorials/beginner/nlp/advanced_tutorial.html
+"""
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
-torch.manual_seed(2)
+torch.manual_seed(1)
 
 def argmax(vec):
   _, idx = torch.max(vec, 1)

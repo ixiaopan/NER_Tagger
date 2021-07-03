@@ -19,17 +19,23 @@ def train():
   # for reproducibility
   torch.manual_seed(45)
 
-  # data loader
-  data_dir = './data/toy'
-  train_loader, valid_loader = utils.build_ner_dataloader(data_dir, names = ['train', 'valid'], batch_size=params['batch_size'])
 
   # merge dataset params
+  data_dir = './data/toy'
   data_params = utils.read_json(os.path.join(data_dir, 'dataset_params.json'))
   params.update(data_params)
   print('=== parameters ===')
   print(params)
+
+  # data loader TODO: 
+  train_loader, valid_loader = utils.build_ner_custom_dataloader(
+    data_dir, 
+    names = ['train', 'valid'], 
+    batch_size=params['batch_size']
+  )
   print('\nTotal Train Batch: ', len(train_loader))
   
+
   # define model
   model = rnn.LSTM(params).cuda() if is_cuda else rnn.LSTM(params)
   optimiser = optim.Adam(model.parameters(), lr=params['learning_rate'])
@@ -37,6 +43,7 @@ def train():
   metrics_func = rnn.metrics_func # a dictionary containing various metrics
   print('=== model ===')
   print(model)
+
 
   # train model
   print('=== training ===')
