@@ -15,8 +15,8 @@ BiLSTM/data/simple/*
 !BiLSTM/data/simple/valid/
 
 # log
-BiLSTM/experiments/**/**
-!BiLSTM/experiments/**/params.json
+BiLSTM/experiments/*/*
+!BiLSTM/experiments/*/params.json
 
 
 # production
