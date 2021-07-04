@@ -12,9 +12,88 @@ from collections import Counter
 
 import torch
 from torch.utils.data import TensorDataset, DataLoader
+from torch.autograd import Variable
 
 # from nltk.tokenize import word_tokenize
 # from nltk.corpus import stopwords
+
+
+def save_model(filepath, state, is_best=False):
+  parent_directory = os.path.dirname(filepath)
+  if not os.path.exists(parent_directory):
+    os.mkdir(parent_directory)
+
+  torch.save(state, os.path.join(filepath, 'last.pth.tar'))
+
+  if is_best:
+    torch.save(state, os.path.join(filepath, 'best.pth.tar'))
+
+
+
+def load_model(filepath, model, optimiser=None):
+  parent_directory = os.path.dirname(filepath)
+  if not os.path.exists(parent_directory):
+    return print('File doesn\' exist.')
+
+  model_dict = torch.load(filepath)
+
+  model.load_state_dict(model_dict['model_dict'])
+
+  if optimiser:
+    optimiser.load_state_dict(model_dict['optim_dict'])
+  
+  return model
+
+
+
+def prepare_model_params(data_dir, model_param_dir):
+  # GPU available
+  is_cuda = torch.cuda.is_available()
+  device = torch.device('cuda' if is_cuda else 'cpu')
+
+  # load parameters
+  params = read_json(os.path.join(model_param_dir, 'params.json'))
+  params['cuda'] = is_cuda
+  params['device'] = device
+
+  # for reproducibility
+  torch.manual_seed(45)
+
+  # merge dataset params
+  data_params = read_json(os.path.join(data_dir, 'dataset_params.json'))
+  params.update(data_params)
+
+  return params
+
+
+def init_baseline_model(model, data_dir, model_param_dir):
+  params = prepare_model_params(data_dir, model_param_dir)
+
+  # define model
+  pre_word_embedding=None
+  if bool(params['use_pre_trained']):
+    pre_word_embedding = np.load(os.path.join(data_dir, 'pre_word_embedding.npy'))
+
+  model = model(
+    vocab_size = params['vocab_size'], 
+    hidden_dim = params['hidden_dim'], 
+    embedding_dim = params['word_embed_dim'], 
+    tag2id = read_json(os.path.join(data_dir, 'tag_id.json')), 
+
+    dropout = params['dropout'], 
+    pre_word_embedding=pre_word_embedding,
+
+    use_char_embed = params['use_char_embed'], 
+    char_embedding_dim = params['char_embed_dim'], 
+    char_hidden_dim = params['char_hidden_dim'],
+    char2id = read_json(os.path.join(data_dir, 'char_id.json'))
+  )
+
+  if params['cuda']:
+    model.to(params['device'])
+
+  return model, params
+
 
 
 def save_text(filepath, text, transform_fn=None):
@@ -196,7 +275,8 @@ def build_ner_profile(
   use_pre_trained=False,
   glove_word_dim=None, 
   augment_vocab_from_glove=False, 
-  min_tag_freq=1
+  min_tag_freq=1,
+  min_char_freq=1,
 ):
   '''
   build vocabulary for ner task,
@@ -205,11 +285,14 @@ def build_ner_profile(
   
   PAD_CHAR = '_PAD' # fill the space for a sentence with unequal length
   UNK_CHAR = '_UNK' # for word that is not present in the vocabulary
-  # PAD_TAG = 'O'
   START_TAG = '_START_' # for state transition
   STOP_TAG = '_STOP_'
 
   data_statistics = {
+    'use_pre_trained': use_pre_trained,
+    'glove_word_dim': glove_word_dim,
+    'augment_vocab_from_glove': augment_vocab_from_glove,
+    
     'train_sentence_len': 0,
     'valid_sentence_len': 0,
     'test_sentence_len': 0,
@@ -225,7 +308,6 @@ def build_ner_profile(
     'tag_size': 0,
     'start_tag': START_TAG,
     'stop_tag': STOP_TAG,
-    # 'pad_tag': PAD_TAG,
 
     'char_size': 0,
   }
@@ -240,10 +322,10 @@ def build_ner_profile(
     split[name + '_word_counter'] = word_counter
     data_statistics[name + '_sentence_len'] = sent_len
 
-  # tag_counter = Counter()
+  tag_counter = Counter()
   for name in ['train', 'valid', 'test']:
-    tag_counter, tag_sent_len = build_vocabulary(path.join(data_dir, name, 'labels.txt'))
-    split[name + '_tag_counter'] = tag_counter
+    tag_counter, tag_sent_len = build_vocabulary(path.join(data_dir, name, 'labels.txt'), tag_counter)
+    # split[name + '_tag_counter'] = tag_counter
     data_statistics[name + '_tag_sentence_len'] = tag_sent_len
 
   # char_counter = Counter()
@@ -258,22 +340,8 @@ def build_ner_profile(
 
   # step 2
   vocab = [ w for w, c in split['train_word_counter'].items() if c >= min_word_freq ]
-  tags = [ t for t, c in split['train_tag_counter'].items() if c >= min_tag_freq ]
-  chars = list(split['train_char_counter'].keys())
- 
-  if PAD_CHAR not in vocab:
-    vocab.append(PAD_CHAR)
-
-  # if PAD_TAG not in tags:
-    # tags.append(PAD_TAG)
-
-  vocab.append(UNK_CHAR)
-  
-  chars.append(PAD_CHAR)
-  chars.append(UNK_CHAR)
-
-  tags.append(START_TAG)
-  tags.append(STOP_TAG)
+  tags = [ t for t, c in tag_counter.items() if c >= min_tag_freq ]
+  chars = [ t for t, c in split['train_char_counter'].items() if c >= min_char_freq ]
 
   # TODO: Why??
   if use_pre_trained and glove_word_dim:
@@ -287,17 +355,29 @@ def build_ner_profile(
         value = line.split()
         glove_words[value[0]] = value[1:]
 
+    
     if augment_vocab_from_glove: # option 1
-      split['train_word_counter'].update(glove_words.keys())
+      split['train_word_counter'].update(list(glove_words.keys()))
     else: # option 2
       for w in ((set(split['valid_word_counter'].keys()) - set(vocab)) | (set(split['test_word_counter'].keys()) - set(vocab))):
         if w in glove_words.keys() or w.lower() in glove_words.keys() or re.sub('\d', '0', w.lower()) in glove_words.keys():
           split['train_word_counter'].update([w])
   
     vocab = [ w for w, _ in split['train_word_counter'].items()]
-    
-
+  
+ 
   # step 3
+  if PAD_CHAR not in vocab:
+    vocab.append(PAD_CHAR)
+
+  vocab.append(UNK_CHAR)
+
+  chars.append(PAD_CHAR)
+  chars.append(UNK_CHAR)
+
+  tags.append(START_TAG)
+  tags.append(STOP_TAG)
+
   data_statistics['vocab_size'] = len(vocab)
   data_statistics['tag_size'] = len(tags)
   data_statistics['char_size'] = len(chars)
@@ -328,8 +408,8 @@ def build_ner_profile(
   save_json(path.join(data_dir, 'tag_id.json'), tag_id)
   save_json(path.join(data_dir, 'inverse_tag_id.json'), inverse_tag_id)
 
-  save_json(path.join(data_dir, 'chars_id.json'), chars_id)
-  save_json(path.join(data_dir, 'inverse_chars_id.json'), inverse_chars_id)
+  save_json(path.join(data_dir, 'char_id.json'), chars_id)
+  save_json(path.join(data_dir, 'inverse_char_id.json'), inverse_chars_id)
 
 
   if use_pre_trained and glove_word_dim:
@@ -343,7 +423,7 @@ def build_ner_profile(
 
 
 
-def convert_ner_dataset_to_id(data_dir, name):
+def convert_ner_dataset_to_id(data_dir, type):
   '''
   convert each word to the corresponding id 
   '''
@@ -354,8 +434,16 @@ def convert_ner_dataset_to_id(data_dir, name):
   char_id = read_json(path.join(data_dir, 'char_id.json'))
 
   sentences, tags, char_sent = [], [], []
-  with open(path.join(data_dir, name, 'sentences.txt')) as f:
+  with open(path.join(data_dir, type, 'sentences.txt')) as f:
     for line in f.read().split('\n'): # for each line
+      # [
+      #   [
+      #     [0 # each char, 1, 2] # each word, 
+      #     [2, 1, 2, 3], # each word
+      #   ] # each sentence
+      #   [[0, 1, 2], [2, 1, 2, 3]]
+      # ] 
+      # (sentence_N, word_N, char_N)
       char_sent.append([ 
         [ char_id[c if c in char_id.keys() else data_stats['unk_word']] for c in w ] 
         for w in line.split(' ') 
@@ -370,7 +458,7 @@ def convert_ner_dataset_to_id(data_dir, name):
       sentences.append(sent)
 
 
-  with open(path.join(data_dir, name, 'labels.txt')) as f:
+  with open(path.join(data_dir, type, 'labels.txt')) as f:
     for line in f.read().split('\n'): # for each line
       tag_line = [ tag_id[t] for t in line.split(' ') ]
       tags.append(tag_line)
@@ -380,21 +468,85 @@ def convert_ner_dataset_to_id(data_dir, name):
   assert len(sentences) == len(char_sent)
   for i in range(len(sentences)):
     assert len(sentences[i]) == len(tags[i])
+    assert len(sentences[i]) == len(char_sent[i])
   
   return sentences, tags, char_sent
   
 
-def build_onto_dataloader(data_dir, batch_size = 1, shuffle = True):
+
+def build_onto_dataloader(data_dir, type='train', is_cuda=False, batch_size = 1, shuffle = True):
   '''
-    designed for Ontonotes
-    data_dir: './data/bc/train'
-    Generator: 
-      (batch_sent, batch_chars, batch_labels)
+  Refer: https://gist.github.com/HarshTrivedi/f4e7293e941b17d19058f6fb90ab0fec
+
+  @desc
+    - designed for Ontonotes
+  @params
+    - data_dir: './data/bc'
+    - type: train, test, valid
+  @return 
+    - Generator: (batch_sent, batch_labels, batch_chars, word_len_per_sent)
   '''
-  pass
+  
+  sentences, labels, char_sent = convert_ner_dataset_to_id(data_dir, type)
+
+  data_size = len(sentences)
+
+  if shuffle:
+    torch.manual_seed(45)
+    rand_idx = torch.randperm(data_size)
+
+  for i in range((data_size // batch_size + (0 if data_size % batch_size == 0 else 1))):
+    # fetch sentences and tags
+    batch_idx = rand_idx[i*batch_size : (i+1)*batch_size ]
+
+    # batch_sent_chars, (batch_size, word_N, char_N)
+    # [
+    #   [
+    #     [6, 9, 8, 4, 1, 11, 12, 10], # 8
+    #     [12, 5, 8, 14], # 4
+    #     [7, 3, 2, 5, 13, 7] # 6
+    #   ]
+    # ]
+    # since batch_size = 1
+    batch_one_sent_chars = [ char_sent[idx] for idx in batch_idx][0]
+    batch_one_sentences = [ sentences[idx] for idx in batch_idx ][0]
+    batch_one_tags = [ labels[idx] for idx in batch_idx ][0]
 
 
-def build_ner_custom_dataloader(data_dir, names = ['train', 'valid', 'test'], batch_size = 1, shuffle = True):
+    # Step 1, calculate the max length of a word, [8, 4, 6]
+    word_len_per_sent = torch.LongTensor( [ len(s) for s in batch_one_sent_chars ])
+    max_word_len_per_sent = word_len_per_sent.max() # 8
+
+
+    # Step 2, Pad with 0s
+    # (word_N, max_word_len)
+    fixed_char_per_sent = torch.zeros(( len(batch_one_sent_chars), max_word_len_per_sent ), dtype=torch.long)
+    for idx, (seq, seqlen) in enumerate(zip(batch_one_sent_chars, word_len_per_sent)):
+      fixed_char_per_sent[idx, :seqlen] = torch.LongTensor(seq)
+
+  
+    # Step 3, sort instances in descending order
+    # [
+    #   [ 6  9  8  4  1 11 12 10 ]
+    #   [ 7  3  2  5 13  7  0  0 ]
+    #   [ 12  5  8 14  0  0  0  0 ]
+    # ]
+    word_len_per_sent, perm_idx = torch.sort(word_len_per_sent, dim=0, descending=True)
+    fixed_char_per_sent = fixed_char_per_sent[perm_idx]
+
+
+    fixed_char_per_sent = Variable(fixed_char_per_sent)
+    batch_one_sentences = Variable(torch.LongTensor(batch_one_sentences))
+    batch_one_tags = Variable(torch.LongTensor(batch_one_tags))
+
+    if is_cuda:
+        fixed_char_per_sent, batch_one_sentences, batch_one_tags = fixed_char_per_sent.cuda(), batch_one_sentences.cuda(), batch_one_tags.cuda()
+
+    yield batch_one_sentences, batch_one_tags, fixed_char_per_sent, word_len_per_sent, perm_idx
+
+
+
+def build_custom_dataloader(data_dir, names = ['train', 'valid', 'test'], batch_size = 1, shuffle = True):
     '''
     designed for CS230
     

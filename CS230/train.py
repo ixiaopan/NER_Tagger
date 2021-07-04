@@ -28,13 +28,11 @@ def train():
   print(params)
 
   # data loader TODO: 
-  train_loader, valid_loader = utils.build_ner_custom_dataloader(
+  train_loader, valid_loader = utils.build_custom_dataloader(
     data_dir, 
     names = ['train', 'valid'], 
     batch_size=params['batch_size']
   )
-  print('\nTotal Train Batch: ', len(train_loader))
-  
 
   # define model
   model = rnn.LSTM(params).cuda() if is_cuda else rnn.LSTM(params)

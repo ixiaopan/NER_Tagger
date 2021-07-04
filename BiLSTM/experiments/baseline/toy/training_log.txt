@@ -1,0 +1,11 @@
+Sun Jul  4 23:20:10 2021
+epoch 1/10, train loss: 2.0320, accuracy: 79.200 , loss: 0.994
+epoch 2/10, train loss: 0.9839, accuracy: 83.200 , loss: 0.817
+epoch 3/10, train loss: 0.8496, accuracy: 83.200 , loss: 0.859
+epoch 4/10, train loss: 0.7659, accuracy: 83.200 , loss: 0.832
+epoch 5/10, train loss: 0.6473, accuracy: 83.200 , loss: 0.796
+epoch 6/10, train loss: 0.5453, accuracy: 83.200 , loss: 0.786
+epoch 7/10, train loss: 0.4579, accuracy: 83.200 , loss: 0.800
+epoch 8/10, train loss: 0.3784, accuracy: 83.200 , loss: 0.826
+epoch 9/10, train loss: 0.3042, accuracy: 83.200 , loss: 0.850
+epoch 10/10, train loss: 0.2354, accuracy: 83.200 , loss: 0.881

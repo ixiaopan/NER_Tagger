@@ -10,10 +10,8 @@
 ~ sh clean.sh
 
 # split each domain dataset into train, valid, and test
-~ python build_onto_dataset.py --domain bc
+~ python build_onto_dataset.py --domain='bc'
 
-# build vocabulary, word_id, tag_id, pre_trained word embedding for each domain
-~ python build_onto_profile.py --data_dir='./data/toy' --use_pre_trained=1
 ```
 
 - bc
@@ -31,12 +29,22 @@
 ## Model Training and Evaluation
 
 ```bash
-~ python train.py 
-~ python evaluate.py
+# build vocabulary, word_id, tag_id, pre_trained word embedding for each domain
+~ python build_onto_profile.py --data_dir='./data/toy' --use_pre_trained=true --augment_vocab_from_glove=false
+
+~ python train_baseline.py --data_dir = './data/bc'
+
+~ python eval_indomain.py --data_dir = './data/bc'
 ```
 
 
 ## References
 
 - [Neural Architectures for Named Entity Recognition - Github](https://github.com/glample/tagger)
+
+- [CS230 Tutorial](https://cs230.stanford.edu/blog/namedentity/)
+
+- [Advanced Tutorial - PyTorch](https://pytorch.org/tutorials/beginner/nlp/advanced_tutorial.html)
+
+- [ZubinGou/NER-BiLSTM-CRF-PyTorch](https://github.com/ZubinGou/NER-BiLSTM-CRF-PyTorch/tree/0146defefcc088b045016bafe5ea326fc52c7027)
 

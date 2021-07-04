@@ -37,8 +37,7 @@ class BiLSTM_CRF(nn.Module):
   def __init__(
     self, 
     vocab_size, tag2id, embedding_dim, hidden_dim=256, dropout=.5, 
-    use_char_embed=False, char_embedding_dim=25, char_hidden_dim=64, char2id=None, 
-    pre_word_embedding=None
+    
   ):
     super(BiLSTM_CRF, self).__init__()
     
@@ -49,31 +48,9 @@ class BiLSTM_CRF(nn.Module):
     self.tag2id = tag2id
     self.num_of_tag = len(tag2id)
    
-    self.char_hidden_dim = char_hidden_dim
-
-    self.pre_word_embedding = pre_word_embedding
-    self.use_char_embed = use_char_embed
-
-    # character-level
-    if use_char_embed:
-      self.char_embed = nn.Embedding(len(char2id), char_embedding_dim)
-      self.char_lstm = nn.LSTM(char_embedding_dim, char_hidden_dim // 2, num_layers = 1, bidirectional=True, batch_first=True)
-
-
-    # pre-trained word embedding 300-d
     self.word_embed = nn.Embedding(vocab_size, embedding_dim)
-    if self.pre_word_embedding is not None:
-      pass # TODO: use pretrained word vectors
-
-
-    # dropout training
     self.dropout = nn.Dropout(dropout)
-
-    if use_char_embed:
-      self.lstm = nn.LSTM(embedding_dim + char_hidden_dim, hidden_dim // 2, bidirectional=True, batch_first=True)
-    else:
-      self.lstm = nn.LSTM(embedding_dim, hidden_dim // 2, num_layers = 1, bidirectional=True, batch_first=True)
-    
+    self.lstm = nn.LSTM(embedding_dim, hidden_dim // 2, num_layers = 1, bidirectional=True, batch_first=True)
     self.fc = nn.Linear(hidden_dim, self.num_of_tag)
 
     # crf layer
@@ -109,36 +86,13 @@ class BiLSTM_CRF(nn.Module):
     return log_sum_exp(total_path_score)
 
 
-  def _get_lstm_features(self, inputs, input_chars=None, chars2_length=None, d=None):
+  def _get_lstm_features(self, inputs):
     '''
     inputs(batch_size, seq_n): batch_n sentences
     '''
 
-    if self.use_char_embed:
-      embed_chars = self.char_embed(input_chars)
-      # packed = torch.nn.utils.rnn.pack_padded_sequence(embed_chars, ??)
-      # lstm_char_out, _ = self.char_lstm(packed)
-      # char_outputs, char_output_lengths = torch.nn.utils.rnn.pad_packed_sequence(lstm_char_out)
-
-      # outputs = char_outputs.transpose(0, 1)
-      # chars_embeds_temp = Variable(torch.FloatTensor(
-      #     torch.zeros((char_outputs.size(0), char_outputs.size(2)))
-      # )).cuda()
-      # for i, index in enumerate(char_output_lengths):
-      #   chars_embeds_temp[i] = torch.cat((
-      #       outputs[i, index - 1, :self.char_hidden_dim],
-      #       outputs[i, 0, self.char_hidden_dim:],
-      #   ))
-      # embed_chars = chars_embeds_temp.clone()
-      # for i in range(embed_chars.size(0)):
-      #     embed_chars[d[i]] = chars_embeds_temp[i]
-
-
     # (batch_size, seq_n, embed_dim)
     embed_words = self.word_embed(inputs).view(1, -1, self.embedding_dim)
-    # total_embeds = torch.cat((embed_words, embed_chars), 1)
-    # total_embeds = total_embeds.unsqueeze(1)
-    # total_embeds = self.dropout(total_embeds)
 
     # lstm_out: (batch_size, seq_n, hidden_dim)
     lstm_out, _ = self.lstm(embed_words)
@@ -146,7 +100,7 @@ class BiLSTM_CRF(nn.Module):
     # (batch_size*seq_n, hidden_dim)
     lstm_out = lstm_out.contiguous().view(-1, self.hidden_dim)
    
-    # lstm_out = self.dropout(lstm_out)
+    lstm_out = self.dropout(lstm_out)
    
     # emission score
     # B-Per, I-Per, B-LOC, I-LOC, O
@@ -185,8 +139,8 @@ class BiLSTM_CRF(nn.Module):
     return score
 
 
-  def neg_log_likelihood(self, inputs, tags, input_chars=None, chars2_length=None, d=None):
-    feats = self._get_lstm_features(inputs, input_chars, chars2_length, d)
+  def neg_log_likelihood(self, inputs, tags):
+    feats = self._get_lstm_features(inputs)
 
     forward_score = self._forward_alg(feats)
 
@@ -260,6 +214,7 @@ training_data = [
     "B I O O O O B".split()
   )
 ]
+
 word_to_ix = {}
 for sentence, tags in training_data:
     for word in sentence:
@@ -279,19 +234,22 @@ with torch.no_grad():
   print(model(precheck_sent))
 
 
-for epoch in range(300):
+for epoch in range(200):
   for sentence, tags in training_data:
     model.zero_grad()
 
     sent_id = prepare_sequence(sentence, word_to_ix)
     targets = torch.tensor([ tag_to_ix[t] for t in tags ], dtype=torch.long)
-
     loss = model.neg_log_likelihood(sent_id, targets)
     
     loss.backward()
     optimizer.step()
 
+
 with torch.no_grad():
   precheck_sent = prepare_sequence(training_data[0][0], word_to_ix)
-  precheck_tags = torch.tensor([tag_to_ix[t] for t in training_data[0][1]], dtype=torch.long)
+  
+  precheck_tags = [tag_to_ix[t] for t in training_data[0][1]]
+  
+  print('target ', precheck_tags)
   print(model(precheck_sent))

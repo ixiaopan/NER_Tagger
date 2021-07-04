@@ -1,9 +1,15 @@
-from numpy.lib.function_base import select
+'''
+The baseline ner model
+'''
+
 import torch
 import torch.nn as nn
-import torch.optim as optim
+from torch.nn import init
+import numpy as np
+
 
 torch.manual_seed(2)
+
 
 def argmax(vec):
   _, idx = torch.max(vec, 1)
@@ -23,10 +29,27 @@ def log_sum_exp(vec):
   return max_score + torch.log(torch.sum(torch.exp(vec - max_score_broadcast)))
 
 
+def init_lstm(input_lstm):
+  """
+  Initialize lstm
+  """
+  for param in input_lstm.parameters():
+      if len(param.shape) >= 2:
+          init.orthogonal_(param.data)
+      else:
+          init.normal_(param.data)
+
+
+def init_linear(input_linear):
+    """
+    Initialize linear transformation
+    """
+    init.xavier_normal_(input_linear.weight.data)
+    init.normal_(input_linear.bias.data)
+
+
 START_TAG = '_START_'
 STOP_TAG = '_STOP_'
-embedding_dim = 5
-hidden_dim = 4
 
 
 class BiLSTM_CRF(nn.Module):
@@ -44,39 +67,43 @@ class BiLSTM_CRF(nn.Module):
    
     self.tag2id = tag2id
     self.num_of_tag = len(tag2id)
-   
-    self.char_hidden_dim = char_hidden_dim
-
-    self.pre_word_embedding = pre_word_embedding
-    self.use_char_embed = use_char_embed
 
     # character-level
+    self.use_char_embed = use_char_embed
     if use_char_embed:
+      self.char_hidden_dim = char_hidden_dim
       self.char_embed = nn.Embedding(len(char2id), char_embedding_dim)
       self.char_lstm = nn.LSTM(char_embedding_dim, char_hidden_dim // 2, num_layers = 1, bidirectional=True, batch_first=True)
+      init_lstm(self.char_lstm)
 
-
-    # pre-trained word embedding 300-d
     self.word_embed = nn.Embedding(vocab_size, embedding_dim)
+    
+    # pre-trained word embedding 300-d
+    self.pre_word_embedding = pre_word_embedding
     if self.pre_word_embedding is not None:
-      pass # TODO: use pretrained word vectors
+      self.word_embed.weight = nn.Parameter(torch.FloatTensor(pre_word_embedding))
 
 
-    # dropout training
+    # dropout layer
     self.dropout = nn.Dropout(dropout)
 
+    # BiLSTM layer
     if use_char_embed:
       self.lstm = nn.LSTM(embedding_dim + char_hidden_dim, hidden_dim // 2, bidirectional=True, batch_first=True)
     else:
       self.lstm = nn.LSTM(embedding_dim, hidden_dim // 2, num_layers = 1, bidirectional=True, batch_first=True)
-    
-    self.fc = nn.Linear(hidden_dim, self.num_of_tag)
+    init_lstm(self.lstm)
 
-    # crf layer
+    # context layer
+    self.fc = nn.Linear(hidden_dim, self.num_of_tag)
+    init_linear(self.fc)
+
+    # CRF layer transition score
     # T_{ij} transfer from i to j, (k+2, k+2)
     self.transitionMatrix = nn.Parameter(torch.randn(self.num_of_tag, self.num_of_tag))
-    # never transfer to the start tag, transfer from the stop tag,
+    # never transfer to the start tag
     self.transitionMatrix.data[:, tag2id[START_TAG]] = -10000
+    # never transfer from the stop tag
     self.transitionMatrix.data[tag2id[STOP_TAG], :] = -10000
 
 
@@ -105,44 +132,76 @@ class BiLSTM_CRF(nn.Module):
     return log_sum_exp(total_path_score)
 
 
-  def _get_lstm_features(self, inputs, input_chars=None, chars2_length=None, d=None):
+  def _get_lstm_features(
+    self, 
+    inputs, input_chars=None, 
+    word_len_per_sent=None, perm_idx=None, 
+    device=None
+  ):
     '''
-    inputs(batch_size, seq_n): batch_n sentences
+    inputs, (seq_n)
+    
+    input_chars, (seq_n, max_seq_len)
+    # [
+    #   [ 6  9  8  4  1 11 12 10 ] # 8
+    #   [ 7  3  2  5 13  7  0  0 ] # 6
+    #   [ 12  5  8 14  0  0  0  0 ] # 4
+    # ]
     '''
 
     if self.use_char_embed:
+      # (seq_n, max_seq_len, char_embedding_dim)
       embed_chars = self.char_embed(input_chars)
-      # packed = torch.nn.utils.rnn.pack_padded_sequence(embed_chars, ??)
-      # lstm_char_out, _ = self.char_lstm(packed)
-      # char_outputs, char_output_lengths = torch.nn.utils.rnn.pad_packed_sequence(lstm_char_out)
 
-      # outputs = char_outputs.transpose(0, 1)
-      # chars_embeds_temp = Variable(torch.FloatTensor(
-      #     torch.zeros((char_outputs.size(0), char_outputs.size(2)))
-      # )).cuda()
-      # for i, index in enumerate(char_output_lengths):
-      #   chars_embeds_temp[i] = torch.cat((
-      #       outputs[i, index - 1, :self.char_hidden_dim],
-      #       outputs[i, 0, self.char_hidden_dim:],
-      #   ))
-      # embed_chars = chars_embeds_temp.clone()
-      # for i in range(embed_chars.size(0)):
-      #     embed_chars[d[i]] = chars_embeds_temp[i]
+      # (sum_of_seq_len, char_embedding) => (8+6+4, char_embedding_dim)
+      packed_char_inputs = torch.nn.utils.rnn.pack_padded_sequence(embed_chars, word_len_per_sent, batch_first=True)
 
+      # (sum_of_seq_len, char_hidden_dim) => (8+6+4, char_hidden_dim)
+      lstm_char_out, _ = self.char_lstm(packed_char_inputs)
 
-    # (batch_size, seq_n, embed_dim)
-    embed_words = self.word_embed(inputs).view(1, -1, self.embedding_dim)
-    # total_embeds = torch.cat((embed_words, embed_chars), 1)
-    # total_embeds = total_embeds.unsqueeze(1)
-    # total_embeds = self.dropout(total_embeds)
+      # char_outpus, (seq_n, max_seq_len, char_hidden_dim)
+      # char_input_sizes: equal to word_len_per_sent
+      char_outputs, char_input_sizes = torch.nn.utils.rnn.pad_packed_sequence(lstm_char_out, batch_first=True)
+      
+      # concatenate the last output of BiLSTM
+      concat_char_embed_sorted = torch.zeros((char_outputs.size(0), char_outputs.size(2)), dtype=torch.float)
+      for i, index in enumerate(char_input_sizes):
+        concat_char_embed_sorted[i] = torch.cat((
+            char_outputs[ i, index - 1, :(self.char_hidden_dim // 2) ],
+            char_outputs[ i, 0, (self.char_hidden_dim // 2): ],
+        ))
 
-    # lstm_out: (batch_size, seq_n, hidden_dim)
-    lstm_out, _ = self.lstm(embed_words)
-   
+      # the obtained concat_char_embedding is sorted in descending order by seq_len
+      # however, the inputs is the original inputs, so we need map them correctly so as to concate them later
+      concat_char_embed = torch.zeros_like(concat_char_embed_sorted)
+      for i in range(concat_char_embed.size(0)):
+        concat_char_embed[perm_idx[i]] = concat_char_embed_sorted[i]
+      concat_char_embed.to(device)
+
+    
+    if self.use_char_embed:
+      # (seq_n, embed_dim)
+      embed_words = self.word_embed(inputs)
+      
+      total_embeds = torch.cat((embed_words, concat_char_embed), 1)
+      # (batch_size=1, seq_n, word_embedding) add batch_size=1 at the 0th-dimension
+      total_embeds = total_embeds.unsqueeze(0)
+      
+      total_embeds = self.dropout(total_embeds)
+      # lstm_out: (batch_size=1, seq_n, hidden_dim)
+      
+      lstm_out, _ = self.lstm(total_embeds)
+    else:
+      # (batch_size, seq_n, embed_dim)
+      embed_words = self.word_embed(inputs).view(1, -1, self.embedding_dim)
+      
+      lstm_out, _ = self.lstm(embed_words)
+    
+
     # (batch_size*seq_n, hidden_dim)
     lstm_out = lstm_out.contiguous().view(-1, self.hidden_dim)
-   
-    # lstm_out = self.dropout(lstm_out)
+    
+    lstm_out = self.dropout(lstm_out)
    
     # emission score
     # B-Per, I-Per, B-LOC, I-LOC, O
@@ -181,8 +240,9 @@ class BiLSTM_CRF(nn.Module):
     return score
 
 
-  def neg_log_likelihood(self, inputs, tags, input_chars=None, chars2_length=None, d=None):
-    feats = self._get_lstm_features(inputs, input_chars, chars2_length, d)
+
+  def neg_log_likelihood(self, inputs, tags, input_chars=None, word_len_per_sent=None, perm_idx=None, device=None):
+    feats = self._get_lstm_features(inputs, input_chars, word_len_per_sent, perm_idx, device)
 
     forward_score = self._forward_alg(feats)
 
@@ -237,57 +297,9 @@ class BiLSTM_CRF(nn.Module):
     return path_score, best_path
 
 
-  def forward(self, inputs):
-    feats = self._get_lstm_features(inputs)
+  def forward(self, inputs, input_chars=None, word_len_per_sent=None, perm_idx=None, device=None):
+    feats = self._get_lstm_features(inputs, input_chars, word_len_per_sent, perm_idx, device)
 
     score, tag_seq = self._viterbi_decode(feats)
-    
+
     return score, tag_seq
-
-
-
-training_data = [
-  (
-    "the wall street journal reported today that apple corporation made money".split(),
-    "B I I I O O O B I O O".split()
-  ), 
-  (
-    "georgia tech is a university in georgia".split(),
-    "B I O O O O B".split()
-  )
-]
-word_to_ix = {}
-for sentence, tags in training_data:
-    for word in sentence:
-        if word not in word_to_ix:
-            word_to_ix[word] = len(word_to_ix)
-
-tag_to_ix = {"B": 0, "I": 1, "O": 2, START_TAG: 3, STOP_TAG: 4}
-
-model = BiLSTM_CRF(len(word_to_ix), tag_to_ix, embedding_dim, hidden_dim)
-optimizer = optim.SGD(model.parameters(), lr=0.01, weight_decay=1e-4)
-
-print(model)
-
-with torch.no_grad():
-  precheck_sent = prepare_sequence(training_data[0][0], word_to_ix)
-  precheck_tags = torch.tensor([tag_to_ix[t] for t in training_data[0][1]], dtype=torch.long)
-  print(model(precheck_sent))
-
-
-for epoch in range(300):
-  for sentence, tags in training_data:
-    model.zero_grad()
-
-    sent_id = prepare_sequence(sentence, word_to_ix)
-    targets = torch.tensor([ tag_to_ix[t] for t in tags ], dtype=torch.long)
-
-    loss = model.neg_log_likelihood(sent_id, targets)
-    
-    loss.backward()
-    optimizer.step()
-
-with torch.no_grad():
-  precheck_sent = prepare_sequence(training_data[0][0], word_to_ix)
-  precheck_tags = torch.tensor([tag_to_ix[t] for t in training_data[0][1]], dtype=torch.long)
-  print(model(precheck_sent))
