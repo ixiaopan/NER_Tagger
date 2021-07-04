@@ -19,9 +19,8 @@ from torch.autograd import Variable
 
 
 def save_model(filepath, state, is_best=False):
-  parent_directory = os.path.dirname(filepath)
-  if not os.path.exists(parent_directory):
-    os.mkdir(parent_directory)
+  if not os.path.exists(filepath):
+    os.mkdir(filepath)
 
   torch.save(state, os.path.join(filepath, 'last.pth.tar'))
 

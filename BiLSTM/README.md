@@ -6,12 +6,14 @@
 ```bash
 ~ cd BiLSTM
 
+# download toy dataset 
+~ sh download.sh
+
 # clean ontonotes dataset & extract each domain
 ~ sh clean.sh
 
 # split each domain dataset into train, valid, and test
 ~ python build_onto_dataset.py --domain='bc'
-
 ```
 
 - bc
@@ -30,11 +32,11 @@
 
 ```bash
 # build vocabulary, word_id, tag_id, pre_trained word embedding for each domain
-~ python build_onto_profile.py --data_dir='./data/toy' --use_pre_trained=true --augment_vocab_from_glove=false
+~ python build_onto_profile.py --data_dir='./data/simple' --use_pre_trained=false --augment_vocab_from_glove=false
 
-~ python train_baseline.py --data_dir = './data/bc'
+~ python train_baseline.py --data_dir='./data/simple'
 
-~ python eval_indomain.py --data_dir = './data/bc'
+~ python eval_baseline.py --data_dir='./data/simple'
 ```
 
 

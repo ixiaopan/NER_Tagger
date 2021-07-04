@@ -5,7 +5,19 @@ node_modules
 venv
 
 # data
-data
+# !data/
+CS230/data/*
+BiLSTM/data/*
+!BiLSTM/data/simple/
+BiLSTM/data/simple/*
+!BiLSTM/data/simple/train/
+!BiLSTM/data/simple/test/
+!BiLSTM/data/simple/valid/
+
+# log
+BiLSTM/experiments/**/**
+!BiLSTM/experiments/**/params.json
+
 
 # production
 build
