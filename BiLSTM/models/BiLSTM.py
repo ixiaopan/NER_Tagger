@@ -29,6 +29,7 @@ def log_sum_exp(vec):
   return max_score + torch.log(torch.sum(torch.exp(vec - max_score_broadcast)))
 
 
+
 def init_lstm(input_lstm):
   """
   Initialize lstm
@@ -55,7 +56,11 @@ STOP_TAG = '_STOP_'
 class BiLSTM_CRF(nn.Module):
   def __init__(
     self, 
-    vocab_size, tag2id, embedding_dim, hidden_dim=256, dropout=.5, 
+    vocab_size, 
+    tag2id, 
+    embedding_dim, 
+    hidden_dim=256, 
+    dropout=.5, 
     use_char_embed=False, char_embedding_dim=25, char_hidden_dim=64, char2id=None, 
     pre_word_embedding=None,
     debug=False
@@ -110,12 +115,13 @@ class BiLSTM_CRF(nn.Module):
     self.transitionMatrix.data[tag2id[STOP_TAG], :] = -10000
 
 
-  def _forward_alg(self, feats):
-    init_alphas = torch.full((1, self.num_of_tag), -1000.)
+  def _forward_alg(self, feats, device=None):
+    init_alphas = torch.full((1, self.num_of_tag), -1000.).to(device)
     
     init_alphas[0][self.tag2id[START_TAG]] = 0
 
     previous_score = init_alphas
+
 
     for feat in feats: # each word
       all_possible_tag_score = []
@@ -125,13 +131,13 @@ class BiLSTM_CRF(nn.Module):
         trans_score = self.transitionMatrix[:, next_tag].view(1, -1)
 
         next_tag_score = previous_score + trans_score + emit_score
-        
+
         all_possible_tag_score.append(log_sum_exp(next_tag_score).view(1))
 
       previous_score = torch.cat(all_possible_tag_score).view(1, -1)
     
     total_path_score = previous_score + self.transitionMatrix[:, self.tag2id[STOP_TAG]]
-    
+
     return log_sum_exp(total_path_score)
 
 
@@ -233,7 +239,7 @@ class BiLSTM_CRF(nn.Module):
     return lstm_feats
   
   
-  def _score_sentence(self, feats, tags):
+  def _score_sentence(self, feats, tags, device=None):
     '''
     predict sequence score based on curren predicted feats
     feats(batch_size*seq_len, num_of_tag): predicted label
@@ -256,18 +262,16 @@ class BiLSTM_CRF(nn.Module):
     batch_tags = [ tags[j][ tags[j] >= 0 ] for j in range(batch_size) ] 
 
     # step 2
-    batch_score = torch.zeros((batch_size, 1))
+    batch_score = torch.zeros((batch_size, 1)).to(device)
     
     for j in range(batch_size):
       tags_per_sent = batch_tags[j]
 
       # add 'start'
-      tags_per_sent = torch.cat([torch.tensor([self.tag2id[START_TAG]], dtype=torch.long), tags_per_sent])
-
+      tags_per_sent = torch.cat([torch.tensor([self.tag2id[START_TAG]], dtype=torch.long).to(device), tags_per_sent])
 
       # real seq_len
       feat_per_sent = batch_feats[j][batch_mask[j]]
-
 
       for i, feat in enumerate(feat_per_sent): # loop each word
         batch_score[j] = batch_score[j] + \
@@ -280,7 +284,7 @@ class BiLSTM_CRF(nn.Module):
     return batch_score
 
   
-  def _batch_forward_alg(self, batch_feats, batch_tags):
+  def _batch_forward_alg(self, batch_feats, batch_tags, device=None):
     batch_size = batch_tags.shape[0]
     
     # (batch_size, seq_len, num_of_tag)
@@ -288,12 +292,12 @@ class BiLSTM_CRF(nn.Module):
     
     batch_mask = batch_tags >= 0
 
-    batch_score = torch.zeros((batch_size, 1))
+    batch_score = torch.zeros((batch_size, 1)).to(device)
 
     for j in range(batch_size):
       feats_per_sent = batch_feats[j][batch_mask[j]]
 
-      batch_score[j] = self._forward_alg(feats_per_sent)
+      batch_score[j] = self._forward_alg(feats_per_sent, device)
 
     return batch_score
 
@@ -307,20 +311,20 @@ class BiLSTM_CRF(nn.Module):
     '''
     batch_feats = self._get_lstm_features(inputs, input_chars, word_len_in_batch, perm_idx, device)
 
-    forward_score = self._batch_forward_alg(batch_feats, batch_tags)
+    forward_score = self._batch_forward_alg(batch_feats, batch_tags, device)
 
-    gold_score = self._score_sentence(batch_feats, batch_tags)
-    
+    gold_score = self._score_sentence(batch_feats, batch_tags, device)
+
     # self.logger.log('score', forward_score, gold_score.shape)
 
     return (forward_score - gold_score).sum() / batch_tags.shape[0] 
   
   
   # inference
-  def _viterbi_decode(self, feats):
+  def _viterbi_decode(self, feats, device=None):
     backpointers = []
 
-    init_score = torch.full((1, self.num_of_tag), -10000)
+    init_score = torch.full((1, self.num_of_tag), -10000).to(device)
     init_score[0][self.tag2id[START_TAG]] = 0
 
     previous_score = init_score
@@ -332,7 +336,7 @@ class BiLSTM_CRF(nn.Module):
       for next_tag in range(self.num_of_tag):
         # emission score stay the same across all the tags
         next_tag_score = previous_score + self.transitionMatrix[:, next_tag].view(1, -1)
-        
+
         # the best previous tag to the current 'next_tag'
         best_tag_id = argmax(next_tag_score) 
         bptrs_t.append(best_tag_id)
@@ -342,28 +346,32 @@ class BiLSTM_CRF(nn.Module):
 
       # (1, num_of_tag)
       previous_score = (torch.cat(viterbi_tag_score) + feat).view(1, -1)
-      
+
       # ['start_tag', 'start_tag', 'start_tag', ..., tag_k]
       backpointers.append(bptrs_t) # (len(sentence), num_of_tag)
+
 
     terminal_score = previous_score + self.transitionMatrix[:, self.tag2id[STOP_TAG]]
     last_best_tag_id = argmax(terminal_score)
     path_score = terminal_score[0][last_best_tag_id]
+
 
     best_path = [last_best_tag_id]
     for path_pointer in reversed(backpointers):
       last_best_tag_id = path_pointer[last_best_tag_id]
       best_path.append(last_best_tag_id)
 
+
     start = best_path.pop()
     assert start == self.tag2id[START_TAG]
+
 
     best_path.reverse()
     return path_score, best_path
 
 
 
-  def _batch_viterbi_decode(self, batch_feats, batch_tags):
+  def _batch_viterbi_decode(self, batch_feats, batch_tags, device=None):
     batch_size = batch_tags.shape[0]
     
     batch_feats = batch_feats.reshape(batch_size, -1, batch_feats.shape[1]) 
@@ -375,7 +383,7 @@ class BiLSTM_CRF(nn.Module):
     for j in range(batch_size):
       feats_per_sent = batch_feats[j][batch_mask[j]]
    
-      batch_path.append(self._viterbi_decode(feats_per_sent))
+      batch_path.append(self._viterbi_decode(feats_per_sent, device))
 
     return batch_path
 
@@ -388,7 +396,7 @@ class BiLSTM_CRF(nn.Module):
     '''
     batch_feats = self._get_lstm_features(batch_inputs, input_chars, word_len_in_batch, perm_idx, device)
 
-    batch_path = self._batch_viterbi_decode(batch_feats, batch_tags)
+    batch_path = self._batch_viterbi_decode(batch_feats, batch_tags, device)
 
     # (batch_size, (score, tag_seq))
     return batch_path

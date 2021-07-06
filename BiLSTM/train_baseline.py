@@ -36,11 +36,13 @@ def train_and_evaluate(
   # train model
   print('=== training ===')
   start_time = time.time()
-  best_metric_score = 0
   training_log = [ time.asctime( time.localtime(time.time()) ) ] # record epoch logs
+  
+  best_metric_score = 0
 
   for epoch in range(params['epoches']):
     train_loss_per_epoch = []
+    is_best = False
 
     train_loader = utils.build_onto_dataloader(
       domain_data_dir, 
@@ -48,7 +50,6 @@ def train_and_evaluate(
       batch_size=params['batch_size'], 
       is_cuda=params['cuda']
     )
-
 
     for i, (inputs, labels, char_inputs, word_len_in_batch, perm_idx) in enumerate(train_loader):
       '''
@@ -76,10 +77,8 @@ def train_and_evaluate(
       loss.backward()
       optimiser.step()
 
-
       if i % params['log_every_sent'] == 0:
         train_loss_per_epoch.append(round(loss.item(), 4))
-
 
 
     if epoch == 0 or (epoch + 1) % params['log_every_epoch'] == 0:
@@ -94,14 +93,16 @@ def train_and_evaluate(
         eval_dir = os.path.join(model_param_dir, domain_data_dir.split('/')[-1])
       )
 
-
+      
+      if val_metrics[best_metric] >= best_metric_score:
+        best_metric_score = val_metrics[best_metric]
+        is_best = True
 
       utils.save_model(os.path.join(model_param_dir, domain_data_dir.split('/')[-1]), {
         'epoch': epoch + 1,
         'model_dict': model.state_dict(),
         'optim_dict': optimiser.state_dict()
-      }, val_metrics[best_metric] >= best_metric_score)
-
+      }, is_best)
 
 
 
