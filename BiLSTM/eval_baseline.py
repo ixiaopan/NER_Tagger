@@ -2,7 +2,6 @@
 Evaluate each domain using the baseline model
 '''
 
-import time
 import argparse
 import numpy as np
 import os
@@ -48,9 +47,8 @@ def macro_avg_precision(outputs, pre_labels):
 
     precision_labels.append((t, precision_t, len(TP_t), len(total_P_t)))
 
-  # print('macro', precision_labels)
-
   return np.mean([ p for _, p, _, _ in precision_labels ]) * 100
+
 
 metrics = {
   'accuracy': accuracy,
@@ -61,61 +59,45 @@ metrics = {
 def evaluate(data_dir, type, model, params, eval_dir=False):
   model.eval()
   
-  eva_loss = []
   total_pre_tag = []
   total_true_tag = []
   summary_word_tag_pred = []
   
+  if eval_dir:
+    id_word = utils.read_json(os.path.join(data_dir, 'id_word.json'))
+    id_tag = utils.read_json(os.path.join(data_dir, 'id_tag.json'))
+
   for inputs, labels, char_inputs, word_len_in_batch, perm_idx in \
     utils.build_onto_dataloader(
       data_dir, type, 
       batch_size=params['batch_size'], 
       is_cuda=params['cuda']
   ):
-    # step 1
-    loss = model.neg_log_likelihood(
-      inputs, labels, 
-      char_inputs, word_len_in_batch, perm_idx,
-      params['device'] 
-    )
-    eva_loss.append(loss.item())
 
+    # step 1 prediction
+    _, pre_labels = model( inputs, char_inputs, word_len_in_batch, perm_idx )
+    total_pre_tag += pre_labels
+    total_true_tag += labels.cpu().numpy().tolist()
 
-    # step 2 prediction
-    batch_ret = model( inputs, labels, char_inputs, word_len_in_batch, perm_idx, params['device'] )
-
-    # step 3
-    for (_, pre_labels) in batch_ret:
-      total_pre_tag += pre_labels
-    total_true_tag = [ (labels[j][ labels[j] >= 0 ]).data.tolist() for j in range(len(inputs)) ] 
-    total_true_tag = [ i for s in total_true_tag for i in s ]
-
-
-    # step 4
+    # step 2
     if eval_dir:
-      id_word = utils.read_json(os.path.join(data_dir, 'id_word.json'))
-      id_tag = utils.read_json(os.path.join(data_dir, 'id_tag.json'))
+      for w_id, true_t_id, pred_t_id in zip(inputs, labels, pre_labels):
+        summary_word_tag_pred.append(
+          ' '.join([ 
+            id_word[ str(w_id.item()) ], 
+            id_tag[str(true_t_id.item())], 
+            id_tag[str(pred_t_id)] 
+          ])
+        )
 
-      for i in range(inputs.shape[0]):
-        mask_sent = labels[i] >= 0
-
-        for w_id, true_t_id, pred_t_id in zip(inputs[i][mask_sent], labels[i][mask_sent], batch_ret[i][1]):
-          if true_t_id.item() == -1:
-            true_t_id = 'O'
-          else: 
-            true_t_id = id_tag[str(true_t_id.item())]
-
-          summary_word_tag_pred.append(' '.join([ id_word[ str(w_id.item()) ], true_t_id, id_tag[str(pred_t_id)] ]))
-
+  
   # end
   if eval_dir:
     utils.save_text(os.path.join(eval_dir, type + '_eval_result.json'), summary_word_tag_pred)
 
-  summary_batch = { metric: metrics[metric](total_true_tag, total_pre_tag) for metric in metrics }
-  summary_batch['loss'] = np.mean(eva_loss)
-  summary_batch_str = " , ".join((type + " {}: {:.4f}").format(k, v) for k, v in summary_batch.items())
-  
 
+  summary_batch = { metric: metrics[metric](total_true_tag, total_pre_tag) for metric in metrics }
+  summary_batch_str = " , ".join((type + " {}: {:.4f}").format(k, v) for k, v in summary_batch.items())
   return summary_batch, summary_batch_str
 
 

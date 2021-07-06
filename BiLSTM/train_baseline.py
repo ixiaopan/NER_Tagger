@@ -69,8 +69,7 @@ def train_and_evaluate(
         labels, 
         char_inputs, 
         word_len_in_batch, 
-        perm_idx,
-        params['device']
+        perm_idx
       )
 
       optimiser.zero_grad()
@@ -81,6 +80,7 @@ def train_and_evaluate(
         train_loss_per_epoch.append(round(loss.item(), 4))
 
 
+    # validation
     if epoch == 0 or (epoch + 1) % params['log_every_epoch'] == 0:
       print('epoch %d/%d: ' % (epoch + 1, params['epoches']))
 
@@ -93,17 +93,17 @@ def train_and_evaluate(
         eval_dir = os.path.join(model_param_dir, domain_data_dir.split('/')[-1])
       )
 
-      
+
       if val_metrics[best_metric] >= best_metric_score:
         best_metric_score = val_metrics[best_metric]
         is_best = True
+
 
       utils.save_model(os.path.join(model_param_dir, domain_data_dir.split('/')[-1]), {
         'epoch': epoch + 1,
         'model_dict': model.state_dict(),
         'optim_dict': optimiser.state_dict()
       }, is_best)
-
 
 
       # log...
@@ -117,13 +117,9 @@ def train_and_evaluate(
   
 
 
-
   # training done
   utils.save_text(os.path.join(model_param_dir, domain_data_dir.split('/')[-1], 'training_log.txt'), training_log)
   print('Training time: ', time.strftime("%H:%M:%S", time.gmtime(time.time() - start_time)))
-
-
-
 
 
 
