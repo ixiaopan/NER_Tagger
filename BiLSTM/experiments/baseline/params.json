@@ -1,16 +1,17 @@
 {
   "dropout": 0.5,
-  "batch_size": 1,
-  "epoches": 200,
+  "batch_size": 2,
+  "epoches": 20,
   "learning_rate": 1e-3,
+  "weight_decay": 1e-5,
   
-  "hidden_dim": 128,
-  "word_embed_dim": 50,
+  "hidden_dim": 256,
+  "word_embed_dim": 50, 
 
-  "use_char_embed": false,
-  "char_embed_dim": 45,
-  "char_hidden_dim": 60,
+  "use_char_embed": true,
+  "char_embed_dim": 50,
+  "char_hidden_dim": 64,
 
   "log_every_sent": 1,
-  "log_every_epoch": 10
+  "log_every_epoch": 1
 }

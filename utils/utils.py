@@ -18,20 +18,24 @@ from torch.autograd import Variable
 # from nltk.corpus import stopwords
 
 
-def save_model(filepath, state, is_best=False):
-  if not os.path.exists(filepath):
-    os.mkdir(filepath)
+def save_model(filedir, state, is_best=False):
+  '''
+  @params:
+    filedir: the directory where the file is saved
+    state: the model state
+  '''
+  if not os.path.exists(filedir):
+    os.mkdir(filedir)
 
-  torch.save(state, os.path.join(filepath, 'last.pth.tar'))
+  torch.save(state, os.path.join(filedir, 'last.pth.tar'))
 
   if is_best:
-    torch.save(state, os.path.join(filepath, 'best.pth.tar'))
+    torch.save(state, os.path.join(filedir, 'best.pth.tar'))
 
 
 
 def load_model(filepath, model, optimiser=None):
-  parent_directory = os.path.dirname(filepath)
-  if not os.path.exists(parent_directory):
+  if not os.path.exists(filepath):
     return print('File doesn\' exist.')
 
   model_dict = torch.load(filepath)
@@ -45,18 +49,19 @@ def load_model(filepath, model, optimiser=None):
 
 
 
-def prepare_model_params(data_dir, model_param_dir):
+def prepare_model_params(data_dir, model_param_dir, seed=45):
   # GPU available
   is_cuda = torch.cuda.is_available()
   device = torch.device('cuda' if is_cuda else 'cpu')
 
-  # load parameters
+  # load model parameters
   params = read_json(os.path.join(model_param_dir, 'params.json'))
   params['cuda'] = is_cuda
   params['device'] = device
 
   # for reproducibility
-  torch.manual_seed(45)
+  torch.manual_seed(seed)
+
 
   # merge dataset params
   data_params = read_json(os.path.join(data_dir, 'dataset_params.json'))
@@ -66,6 +71,13 @@ def prepare_model_params(data_dir, model_param_dir):
 
 
 def init_baseline_model(model, data_dir, model_param_dir):
+  '''
+  initialise the baseline model
+  @params:
+    model: baseline model in this case
+    data_dir: which dataset to be used to train
+    model_param_dir: experiment params
+  '''
   params = prepare_model_params(data_dir, model_param_dir)
 
   # define model
@@ -113,7 +125,6 @@ def save_json(filepath, text):
   parent_directory = os.path.dirname(filepath)
   if not os.path.exists(parent_directory):
     os.mkdir(parent_directory)
-
 
   with open(filepath, 'w') as f:
     json.dump(text, f, indent=4)
@@ -171,7 +182,7 @@ def build_vocabulary(filename, word_counter=None):
   
   with open(filename) as f:
     for i, line in enumerate(f.read().split('\n')):
-      word_counter.update(line.split())
+      word_counter.update(line.split(' '))
 
   return word_counter, i + 1
 
@@ -187,7 +198,6 @@ def build_char(filename, char_counter=None):
   
   return:
     - character counter
-    - the number of character
   '''
   if char_counter is None:
     char_counter = Counter()
@@ -221,25 +231,28 @@ def zero_digit(s):
 
 
 
-def prepare_single_sentence(sent, word2id, char2id, unk_name='_UNK'):
+def prepare_single_sentence(sent, word2id, unk_name='_UNK'):
   '''
-  sentence 'He went to school'
+  convert a single sentence to a sequnce of ids
+  e.g.'He went to school'
   '''
   
-  words_id = [ word2id[w] if w in word2id.keys() else word2id[unk_name] for w in sent.split(' ')]
-  
-  chars_id = [ 
-    [char2id[c] if c in char2id.keys() else char2id[unk_name] for c in w] 
-    for w in sent.split(' ')
-  ]
-
-  return words_id, chars_id
+  return [ word2id[w] if w in word2id.keys() else word2id[unk_name] for w in sent.split(' ')]
 
 
 # === NER specific ===
-def load_ner_data(filename=None, encoding="utf8"):
-  msg = filename + ' is not found.'
-  assert os.path.isfile(filename), msg
+def load_ner_data(filename, encoding="utf8"):
+  '''
+  @desc
+    a specific data format for NER
+  
+  @return
+    sentence
+    labels
+  '''
+  if not os.path.exists(filename):
+    return print(filename + ' is not found.')
+
 
   with open(filename, encoding=encoding) as f:
     csvreader = csv.reader(f, delimiter=',')
@@ -272,18 +285,21 @@ def build_ner_profile(
   data_dir, 
   min_word_freq=1, 
   use_pre_trained=False,
-  glove_word_dim=None, 
+  glove_word_dim=50,  # 50, 100, 200, 300
   augment_vocab_from_glove=False, 
   min_tag_freq=1,
-  min_char_freq=1,
 ):
   '''
-  build vocabulary for ner task,
-  data_dir: directory of each domain
+  build the vocabulary of a set of data & pre-load the pre-trained word embedding
+
+  @param
+    - data_dir: directory of each domain
+    - use_pre_trained: whether to use pre-trained word embedding GloVe
+    - glove_word_dim: specify the word dimension to use
   '''
-  
-  PAD_CHAR = '_PAD' # fill the space for a sentence with unequal length
-  UNK_CHAR = '_UNK' # for word that is not present in the vocabulary
+
+  PAD_WORD = '_PAD' # fill the space for a sentence with unequal length
+  UNK_WORD = '_UNK' # for word that is not present in the vocabulary
   START_TAG = '_START_' # for state transition
   STOP_TAG = '_STOP_'
 
@@ -295,14 +311,14 @@ def build_ner_profile(
     'train_sentence_len': 0,
     'valid_sentence_len': 0,
     'test_sentence_len': 0,
-
+    
     'train_tag_sentence_len': 0,
     'valid_tag_sentence_len': 0,
     'test_tag_sentence_len': 0,
 
     'vocab_size': 0,
-    'pad_word': PAD_CHAR,
-    'unk_word': UNK_CHAR,
+    'pad_word': PAD_WORD,
+    'unk_word': UNK_WORD,
 
     'tag_size': 0,
     'start_tag': START_TAG,
@@ -327,26 +343,17 @@ def build_ner_profile(
     # split[name + '_tag_counter'] = tag_counter
     data_statistics[name + '_tag_sentence_len'] = tag_sent_len
 
-  # char_counter = Counter()
-  for name in ['train', 'valid', 'test']:
-    char_counter = build_char(path.join(data_dir, name, 'sentences.txt'))
-    split[name + '_char_counter'] = char_counter
- 
   # should have the same number of lines
   for name in ['train', 'valid', 'test']:
     assert data_statistics[name + '_sentence_len'] == data_statistics[name + '_tag_sentence_len']
 
 
   # step 2
-  vocab = [ w for w, c in split['train_word_counter'].items() if c >= min_word_freq ]
-  tags = [ t for t, c in tag_counter.items() if c >= min_tag_freq ]
-  chars = [ t for t, c in split['train_char_counter'].items() if c >= min_char_freq ]
-
-  # TODO: Why??
   if use_pre_trained and glove_word_dim:
     glove_path = './data/glove.6B/glove.6B.' + str(glove_word_dim) + 'd.txt' 
     if not os.path.isfile(glove_path):
       return print('File doesn\'t exist')
+
 
     glove_words = {}
     with open(glove_path, 'r', encoding="utf-8") as f:
@@ -357,25 +364,28 @@ def build_ner_profile(
     
     if augment_vocab_from_glove: # option 1
       split['train_word_counter'].update(list(glove_words.keys()))
-    else: # option 2
-      for w in ((set(split['valid_word_counter'].keys()) - set(vocab)) | (set(split['test_word_counter'].keys()) - set(vocab))):
-        if w in glove_words.keys() or w.lower() in glove_words.keys() or re.sub('\d', '0', w.lower()) in glove_words.keys():
+    else: # option 2,
+      for w in set(split['valid_word_counter'].keys()).union(set(split['test_word_counter'].keys())):
+        if w in glove_words.keys() or w.lower() in glove_words.keys():
           split['train_word_counter'].update([w])
   
-    vocab = [ w for w, _ in split['train_word_counter'].items()]
-  
- 
+    
   # step 3
-  if PAD_CHAR not in vocab:
-    vocab.append(PAD_CHAR)
+  # for option 1, if min_word_freq>1, this will remove many GloVe words that are not presented in the corpus
+  # for now, we only consider option 2
+  vocab = [ w for w, c in split['train_word_counter'].items() if c >= min_word_freq ]
+  if PAD_WORD not in vocab:
+    vocab.insert(0, PAD_WORD)
+  if UNK_WORD not in vocab:
+    vocab.insert(0, UNK_WORD)
 
-  vocab.append(UNK_CHAR)
+  tags = [ t for t, c in tag_counter.items() if c >= min_tag_freq ]
+  tags.insert(0, START_TAG)
+  tags.insert(0, STOP_TAG)
 
-  chars.append(PAD_CHAR)
-  chars.append(UNK_CHAR)
-
-  tags.append(START_TAG)
-  tags.append(STOP_TAG)
+  chars = list(set([ s for w in vocab for s in w ]))
+  chars.insert(0, PAD_WORD)
+  chars.insert(0, UNK_WORD)
 
   data_statistics['vocab_size'] = len(vocab)
   data_statistics['tag_size'] = len(tags)
@@ -422,38 +432,34 @@ def build_ner_profile(
 
 
 
-def convert_ner_dataset_to_id(data_dir, type):
+def build_onto_dataloader(data_dir, type='train', batch_size = 1, shuffle = True, is_cuda=False):
   '''
-  convert each word to the corresponding id 
-  '''
-  data_stats = read_json(path.join(data_dir, 'dataset_params.json'))
+  Refer: https://gist.github.com/HarshTrivedi/f4e7293e941b17d19058f6fb90ab0fec
 
+  @desc
+    - Customised dataloder designed for Ontonotes
+  @params
+    - data_dir: './data/bc'
+    - type: train, test, valid
+  @return 
+    - Generator: (batch_sent, batch_labels, batch_chars, word_len_per_sent)
+  '''
+
+  data_stats = read_json(path.join(data_dir, 'dataset_params.json'))
   word_id = read_json(path.join(data_dir, 'word_id.json'))
+  id_word = read_json(path.join(data_dir, 'id_word.json'))
   tag_id = read_json(path.join(data_dir, 'tag_id.json'))
   char_id = read_json(path.join(data_dir, 'char_id.json'))
 
-  sentences, tags, char_sent = [], [], []
+  PAD_WORD = data_stats['pad_word']
+  UNK_WORD = data_stats['unk_word']
+
+  # Step 1
+  sentences, tags = [], []
   with open(path.join(data_dir, type, 'sentences.txt')) as f:
     for line in f.read().split('\n'): # for each line
-      # [
-      #   [
-      #     [0 # each char, 1, 2] # each word, 
-      #     [2, 1, 2, 3], # each word
-      #   ] # each sentence
-      #   [[0, 1, 2], [2, 1, 2, 3]]
-      # ] 
-      # (sentence_N, word_N, char_N)
-      char_sent.append([ 
-        [ char_id[c if c in char_id.keys() else data_stats['unk_word']] for c in w ] 
-        for w in line.split(' ') 
-      ])
-
-      sent = []
-      for w in line.split(' '):
-        if w in word_id.keys():
-          sent.append(word_id[w])
-        else:
-          sent.append(word_id[data_stats['unk_word']])
+      sent = [ word_id[w] if w in word_id else word_id[UNK_WORD] 
+          for w in line.split(' ') ]
       sentences.append(sent)
 
 
@@ -462,86 +468,109 @@ def convert_ner_dataset_to_id(data_dir, type):
       tag_line = [ tag_id[t] for t in line.split(' ') ]
       tags.append(tag_line)
 
-
   assert len(sentences) == len(tags)
-  assert len(sentences) == len(char_sent)
   for i in range(len(sentences)):
     assert len(sentences[i]) == len(tags[i])
-    assert len(sentences[i]) == len(char_sent[i])
-  
-  return sentences, tags, char_sent
-  
 
 
-def build_onto_dataloader(data_dir, type='train', is_cuda=False, batch_size = 1, shuffle = True):
-  '''
-  Refer: https://gist.github.com/HarshTrivedi/f4e7293e941b17d19058f6fb90ab0fec
-
-  @desc
-    - designed for Ontonotes
-  @params
-    - data_dir: './data/bc'
-    - type: train, test, valid
-  @return 
-    - Generator: (batch_sent, batch_labels, batch_chars, word_len_per_sent)
-  '''
-  
-  sentences, labels, char_sent = convert_ner_dataset_to_id(data_dir, type)
-
+  # Step 2
   data_size = len(sentences)
-
   if shuffle:
     torch.manual_seed(45)
     rand_idx = torch.randperm(data_size)
+  else:
+    rand_idx = range(data_size)
 
+  # Step 3
+  # how many batches given the fixed 'batch_size'
   for i in range((data_size // batch_size + (0 if data_size % batch_size == 0 else 1))):
-    # fetch sentences and tags
-    batch_idx = rand_idx[i*batch_size : (i+1)*batch_size ]
+    # define some terms
+    # seq_len: the number of words in a setence
+    # word_len: the number of chars in a word
+    # variable_seq_len: indicate explictly that the length vary in sentences
+    # variable_word_len: indicate explictly that the length vary in words
+    batch_idx = rand_idx[ i*batch_size : (i+1)*batch_size ]
 
-    # batch_sent_chars, (batch_size, word_N, char_N)
+    # (batch_size, variable_seq_len)
     # [
-    #   [
-    #     [6, 9, 8, 4, 1, 11, 12, 10], # 8
-    #     [12, 5, 8, 14], # 4
-    #     [7, 3, 2, 5, 13, 7] # 6
-    #   ]
+    #   [9, 29, 10],
+    #   [1, 32, 32, 3, 4, 3]
     # ]
-    # since batch_size = 1
-    batch_one_sent_chars = [ char_sent[idx] for idx in batch_idx][0]
-    batch_one_sentences = [ sentences[idx] for idx in batch_idx ][0]
-    batch_one_tags = [ labels[idx] for idx in batch_idx ][0]
+    batch_sentences = [ sentences[idx] for idx in batch_idx ]
+    batch_tags = [ tags[idx] for idx in batch_idx ]
+
+    # Step 3.1 padding sentence
+    # refer: https://github.com/cs230-stanford/cs230-code-examples/blob/master/pytorch/nlp/model/data_loader.py
+    batch_max_len = max([len(s) for s in batch_sentences])
+
+    batch_data = word_id[PAD_WORD] * np.ones((batch_size, batch_max_len), dtype=int)
+    # -1 corresponds to the word with padding, the loss of them will be ignored 
+    batch_labels = -1 * np.ones((len(batch_sentences), batch_max_len), dtype=int)
+    # (batch_size, max_seq_len)
+    # [
+    #   [9, 29, 10, PAD_, PAD_, PAD_],
+    #   [1, 32, 22,  3,    4,    3]
+    # ]
+    for j in range(len(batch_sentences)):
+      cur_idx = len(batch_sentences[j])
+      batch_data[j][:cur_idx] = batch_sentences[j]
+      batch_labels[j][:cur_idx] = batch_tags[j]
 
 
-    # Step 1, calculate the max length of a word, [8, 4, 6]
-    word_len_per_sent = torch.LongTensor( [ len(s) for s in batch_one_sent_chars ])
-    max_word_len_per_sent = word_len_per_sent.max() # 8
+
+    # Step 3.2 encode characters for each word in batch
+    # (batch_size*max_seq_len, variable_word_len)
+    # [
+    #   [6, 9, 8, 4, 1, 11, 12, 10], # 8
+    #   [12, 5, 8, 14], # 4
+    #   [7, 3, 2, 5, 13, 7] # 6
+    # ]
+    batch_chars = []
+    for sent in batch_data:
+      for w_id in sent:
+        w_seq = []
+        for s in id_word[str(w_id)]:
+          if s in char_id:
+            w_seq.append(char_id[s])
+          else:
+            w_seq.append(char_id[UNK_WORD])
+        batch_chars.append(w_seq)
 
 
-    # Step 2, Pad with 0s
-    # (word_N, max_word_len)
-    fixed_char_per_sent = torch.zeros(( len(batch_one_sent_chars), max_word_len_per_sent ), dtype=torch.long)
-    for idx, (seq, seqlen) in enumerate(zip(batch_one_sent_chars, word_len_per_sent)):
-      fixed_char_per_sent[idx, :seqlen] = torch.LongTensor(seq)
+    # Step 3.2.1, calculate the max length of a word, [8, 4, 6]
+    word_len_in_batch = torch.LongTensor( [ len(s) for s in batch_chars ])
+    max_word_len_in_batch = word_len_in_batch.max() # 8
 
-  
-    # Step 3, sort instances in descending order
+    # Step 3.2.2, Pad with 0s
+    # (batch_size*max_seq_len, max_word_len)
+    fixed_char_in_batch = char_id[PAD_WORD] * torch.ones(
+      ( len(batch_chars), max_word_len_in_batch ), 
+      dtype=torch.long
+    )
+    for idx, (seq, seqlen) in enumerate(zip(batch_chars, word_len_in_batch)):
+      fixed_char_in_batch[idx, :seqlen] = torch.LongTensor(seq)
+
+    # Step 3.2.3, sort instances in descending order
     # [
     #   [ 6  9  8  4  1 11 12 10 ]
     #   [ 7  3  2  5 13  7  0  0 ]
     #   [ 12  5  8 14  0  0  0  0 ]
     # ]
-    word_len_per_sent, perm_idx = torch.sort(word_len_per_sent, dim=0, descending=True)
-    fixed_char_per_sent = fixed_char_per_sent[perm_idx]
+    word_len_in_batch, perm_idx = torch.sort(word_len_in_batch, dim=0, descending=True)
+    fixed_char_in_batch = fixed_char_in_batch[perm_idx]
 
 
-    fixed_char_per_sent = Variable(fixed_char_per_sent)
-    batch_one_sentences = Variable(torch.LongTensor(batch_one_sentences))
-    batch_one_tags = Variable(torch.LongTensor(batch_one_tags))
+    # Step 4
+    fixed_char_in_batch = Variable(fixed_char_in_batch)
+    batch_data = Variable(torch.LongTensor(batch_data))
+    batch_labels = Variable(torch.LongTensor(batch_labels))
 
     if is_cuda:
-        fixed_char_per_sent, batch_one_sentences, batch_one_tags = fixed_char_per_sent.cuda(), batch_one_sentences.cuda(), batch_one_tags.cuda()
+        fixed_char_in_batch, batch_data, batch_labels = fixed_char_in_batch.cuda(), batch_data.cuda(), batch_labels.cuda()
 
-    yield batch_one_sentences, batch_one_tags, fixed_char_per_sent, word_len_per_sent, perm_idx
+    yield batch_data, batch_labels, fixed_char_in_batch, word_len_in_batch, perm_idx
+
+
 
 
 
@@ -568,6 +597,7 @@ def build_custom_dataloader(data_dir, names = ['train', 'valid', 'test'], batch_
     #     split[name] = data_loader
     
     # return split.values()
+
 
 
 
@@ -598,28 +628,5 @@ def build_dataloader(X, y, batch_size = 1, shuffle=False):
     test_loader = DataLoader(test_data, batch_size, shuffle)
     
     return train_loader, valid_loader, test_loader
-
-
-
-
-# def simple_clean_sentence(text):
-#     '''
-#     extract useful tokens from a sentence
-#     '''
-
-#     stop_words_en = stopwords.words('english')
-    
-#     text = text.lower()
-
-#     text = text.translate(str.maketrans('', '', string.punctuation))
-    
-#     tokens = word_tokenize(text)
-    
-#     # remove stopping words
-#     tokens = [ w for w in tokens if w not in stop_words_en ]
-#     tokens = [ w for w in tokens if len(w) > 1 ]
-    
-#     # return tokens
-#     return ' '.join(tokens)
 
 

@@ -13,6 +13,7 @@
 ~ sh clean.sh
 
 # split each domain dataset into train, valid, and test
+# if domain is not specified, it will loop all domain
 ~ python build_onto_dataset.py --domain='bc'
 ```
 
@@ -32,11 +33,11 @@
 
 ```bash
 # build vocabulary, word_id, tag_id, pre_trained word embedding for each domain
-~ python build_onto_profile.py --data_dir='./data/simple' --use_pre_trained=false --augment_vocab_from_glove=false
+~ python build_onto_profile.py --data_dir='./data/toy' --use_pre_trained
 
-~ python train_baseline.py --data_dir='./data/simple'
+~ python train_baseline.py --data_dir='./data/toy'
 
-~ python eval_baseline.py --data_dir='./data/simple'
+~ python eval_baseline.py --data_dir='./data/toy'
 ```
 
 

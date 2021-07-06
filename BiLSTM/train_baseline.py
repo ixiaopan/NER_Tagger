@@ -27,7 +27,7 @@ def train_and_evaluate(
   print('=== model ===')
   print(model)
 
-  optimiser = optim.Adam(model.parameters(), lr=params['learning_rate'])
+  optimiser = optim.Adam(model.parameters(), lr=params['learning_rate'], weight_decay=params['weight_decay'])
 
   # train model
   print('=== training ===')
@@ -38,11 +38,24 @@ def train_and_evaluate(
   for epoch in range(params['epoches']):
     train_loss_per_epoch = []
     
-    train_loader = utils.build_onto_dataloader(domain_data_dir, 'train', is_cuda=params['cuda'])
-    for i, (inputs, labels, char_inputs, word_len_per_sent, perm_idx) in enumerate(train_loader):
+    train_loader = utils.build_onto_dataloader(
+      domain_data_dir, 'train', 
+      batch_size=params['batch_size'], 
+      is_cuda=params['cuda']
+    )
+    for i, (inputs, labels, char_inputs, word_len_in_batch, perm_idx) in enumerate(train_loader):
+      '''
+      inputs: (batch_size, max_seq_len)
+      labels: (batch_size, max_seq_len)
+      char_inputs: (batch_size*max_seq_len, max_word_len)
+      word_len_in_batch: word_len in batch
+      '''
+
       loss = model.neg_log_likelihood(
         inputs, labels, 
-        char_inputs, word_len_per_sent, perm_idx,
+        char_inputs, 
+        word_len_in_batch, 
+        perm_idx,
         params['device']
       )
 
@@ -51,7 +64,7 @@ def train_and_evaluate(
       optimiser.step()
 
       if i % params['log_every_sent'] == 0:
-        train_loss_per_epoch.append(round(loss.item() / len(inputs), 4))
+        train_loss_per_epoch.append(round(loss.item(), 4))
 
 
     if epoch == 0 or (epoch + 1) % params['log_every_epoch'] == 0:

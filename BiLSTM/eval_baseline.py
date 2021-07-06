@@ -38,18 +38,28 @@ def evaluate(data_dir, type, model, params):
   eva_loss = []
   pre_tag = []
   true_tag = []
-  for inputs, labels, char_inputs, word_len_per_sent, perm_idx in utils.build_onto_dataloader(data_dir, type, is_cuda=params['cuda']):
+  
+  for inputs, labels, char_inputs, word_len_in_batch, perm_idx in \
+    utils.build_onto_dataloader(
+      data_dir, type, 
+      batch_size=params['batch_size'], 
+      is_cuda=params['cuda']
+  ):
+    
     loss = model.neg_log_likelihood(
       inputs, labels, 
-      char_inputs, word_len_per_sent, perm_idx,
+      char_inputs, word_len_in_batch, perm_idx,
       params['device'] 
     )
-    eva_loss.append(loss.item() / len(inputs))
+    eva_loss.append(loss.item())
 
-    _, pre_labels = model(inputs, char_inputs, word_len_per_sent, perm_idx, params['device'] )
-    pre_tag += pre_labels
-    true_tag += labels.data.cpu().numpy().tolist()    
-  
+    batch_ret = model(inputs, char_inputs, word_len_in_batch, perm_idx, params['device'] )
+    for (_, pre_labels) in batch_ret:
+      pre_tag += pre_labels
+
+    true_tag += labels.view(-1).data.cpu().numpy().tolist()    
+
+  # end
   summary_batch = { metric: metrics[metric](true_tag, pre_tag) for metric in metrics }
   summary_batch['loss'] = np.mean(eva_loss)
 
