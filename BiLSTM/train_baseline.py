@@ -20,6 +20,7 @@ def train_and_evaluate(
   model_param_dir='./experiments/baseline', 
   best_metric='accuracy'
 ):
+
   # prepare model
   model, params = utils.init_baseline_model(BiLSTM_CRF, domain_data_dir, model_param_dir)
   print('=== parameters ===')
@@ -29,6 +30,9 @@ def train_and_evaluate(
 
   optimiser = optim.Adam(model.parameters(), lr=params['learning_rate'], weight_decay=params['weight_decay'])
 
+  logger = utils.Logger(params['debug'])
+
+
   # train model
   print('=== training ===')
   start_time = time.time()
@@ -37,12 +41,15 @@ def train_and_evaluate(
 
   for epoch in range(params['epoches']):
     train_loss_per_epoch = []
-    
+
     train_loader = utils.build_onto_dataloader(
-      domain_data_dir, 'train', 
+      domain_data_dir, 
+      'train', 
       batch_size=params['batch_size'], 
       is_cuda=params['cuda']
     )
+
+
     for i, (inputs, labels, char_inputs, word_len_in_batch, perm_idx) in enumerate(train_loader):
       '''
       inputs: (batch_size, max_seq_len)
@@ -51,8 +58,14 @@ def train_and_evaluate(
       word_len_in_batch: word_len in batch
       '''
 
+      logger.log('inputs shape:', inputs.shape)
+      logger.log('labels shape:', labels.shape)
+      logger.log('char_inputs shape:', char_inputs.shape)
+
+
       loss = model.neg_log_likelihood(
-        inputs, labels, 
+        inputs, 
+        labels, 
         char_inputs, 
         word_len_in_batch, 
         perm_idx,
@@ -63,13 +76,25 @@ def train_and_evaluate(
       loss.backward()
       optimiser.step()
 
+
       if i % params['log_every_sent'] == 0:
         train_loss_per_epoch.append(round(loss.item(), 4))
 
 
+
     if epoch == 0 or (epoch + 1) % params['log_every_epoch'] == 0:
+      print('epoch %d/%d: ' % (epoch + 1, params['epoches']))
+
       # validation
-      val_metrics = evaluate(domain_data_dir, 'valid', model, params)
+      val_metrics, val_metrics_str = evaluate(
+        domain_data_dir, 
+        'valid', 
+        model, 
+        params,
+        eval_dir = os.path.join(model_param_dir, domain_data_dir.split('/')[-1])
+      )
+
+
 
       utils.save_model(os.path.join(model_param_dir, domain_data_dir.split('/')[-1]), {
         'epoch': epoch + 1,
@@ -77,18 +102,32 @@ def train_and_evaluate(
         'optim_dict': optimiser.state_dict()
       }, val_metrics[best_metric] >= best_metric_score)
 
-      val_metrics_str = " , ".join("{}: {:05.3f}".format(k, v) for k, v in val_metrics.items())
-      epoch_log = 'epoch %d/%d, train loss: %.4f, %s' % (epoch + 1, params['epoches'], np.mean(train_loss_per_epoch), val_metrics_str)
+
+
+
+      # log...
+      epoch_log = 'train loss: %.4f, %s' % (np.mean(train_loss_per_epoch), val_metrics_str)
       training_log.append(epoch_log)
       print(epoch_log)
 
+
+      # revert 
       model.train()
   
+
+
+
   # training done
   utils.save_text(os.path.join(model_param_dir, domain_data_dir.split('/')[-1], 'training_log.txt'), training_log)
   print('Training time: ', time.strftime("%H:%M:%S", time.gmtime(time.time() - start_time)))
 
 
+
+
+
+
 if __name__ == '__main__':
   args = parser.parse_args()
+  
   train_and_evaluate(args.data_dir, args.model_param_dir, args.best_metric)
+

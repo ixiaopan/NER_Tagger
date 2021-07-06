@@ -1,17 +1,19 @@
 {
+  "debug": false,
+  
   "dropout": 0.5,
-  "batch_size": 2,
-  "epoches": 20,
+  "batch_size": 32,
+  "epoches": 2,
   "learning_rate": 1e-3,
   "weight_decay": 1e-5,
   
   "hidden_dim": 256,
-  "word_embed_dim": 50, 
+  "word_embed_dim": 300, 
 
-  "use_char_embed": true,
-  "char_embed_dim": 50,
+  "use_char_embed": false,
+  "char_embed_dim": 30,
   "char_hidden_dim": 64,
 
-  "log_every_sent": 1,
+  "log_every_sent": 1000,
   "log_every_epoch": 1
 }

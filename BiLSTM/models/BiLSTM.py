@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from torch.nn import init
 import numpy as np
-
+from utils import utils
 
 torch.manual_seed(2)
 
@@ -57,9 +57,12 @@ class BiLSTM_CRF(nn.Module):
     self, 
     vocab_size, tag2id, embedding_dim, hidden_dim=256, dropout=.5, 
     use_char_embed=False, char_embedding_dim=25, char_hidden_dim=64, char2id=None, 
-    pre_word_embedding=None
+    pre_word_embedding=None,
+    debug=False
   ):
     super(BiLSTM_CRF, self).__init__()
+
+    self.logger = utils.Logger(debug)
     
     self.vocab_size = vocab_size
     self.embedding_dim = embedding_dim
@@ -118,13 +121,13 @@ class BiLSTM_CRF(nn.Module):
       all_possible_tag_score = []
       for next_tag in range(self.num_of_tag):
         emit_score = feat[next_tag].view(1, -1).expand(1, self.num_of_tag)
-        
+
         trans_score = self.transitionMatrix[:, next_tag].view(1, -1)
-        
+
         next_tag_score = previous_score + trans_score + emit_score
         
         all_possible_tag_score.append(log_sum_exp(next_tag_score).view(1))
-    
+
       previous_score = torch.cat(all_possible_tag_score).view(1, -1)
     
     total_path_score = previous_score + self.transitionMatrix[:, self.tag2id[STOP_TAG]]
@@ -210,7 +213,8 @@ class BiLSTM_CRF(nn.Module):
     else:
       # (batch_size, seq_n, embed_dim)
       embed_words = self.word_embed(inputs)
-      # embed_words = embed_words.view(embed_words.shape[0], -1, self.embedding_dim)
+      self.logger.log('embed_words', embed_words.shape)
+     
       lstm_out, _ = self.lstm(embed_words)
     
 
@@ -224,7 +228,7 @@ class BiLSTM_CRF(nn.Module):
     # 0.3,    0.2,   0.2    0.2   0.1
     # (batch_size*seq_len, num_of_tag)
     lstm_feats = self.fc(lstm_out)
-    # print('lstm_feats shape ', lstm_feats.shape)
+    self.logger.log('lstm_feats shape ', lstm_feats.shape)
 
     return lstm_feats
   
@@ -247,7 +251,6 @@ class BiLSTM_CRF(nn.Module):
     batch_size = tags.shape[0]
    
     batch_feats = feats.reshape(batch_size, -1, feats.shape[1]) # (batch_size, seq_len, num_of_tag)
-    # print('batch_feats shape', batch_feats.shape)
 
     batch_mask = tags >= 0
     batch_tags = [ tags[j][ tags[j] >= 0 ] for j in range(batch_size) ] 
@@ -260,11 +263,11 @@ class BiLSTM_CRF(nn.Module):
 
       # add 'start'
       tags_per_sent = torch.cat([torch.tensor([self.tag2id[START_TAG]], dtype=torch.long), tags_per_sent])
-      
+
+
       # real seq_len
       feat_per_sent = batch_feats[j][batch_mask[j]]
 
-      # print('per sent in batch', tags_per_sent.shape, feat_per_sent.shape)
 
       for i, feat in enumerate(feat_per_sent): # loop each word
         batch_score[j] = batch_score[j] + \
@@ -276,6 +279,7 @@ class BiLSTM_CRF(nn.Module):
 
     return batch_score
 
+  
   def _batch_forward_alg(self, batch_feats, batch_tags):
     batch_size = batch_tags.shape[0]
     
@@ -283,7 +287,7 @@ class BiLSTM_CRF(nn.Module):
     batch_feats = batch_feats.reshape(batch_size, -1, batch_feats.shape[1]) 
     
     batch_mask = batch_tags >= 0
-    
+
     batch_score = torch.zeros((batch_size, 1))
 
     for j in range(batch_size):
@@ -307,6 +311,8 @@ class BiLSTM_CRF(nn.Module):
 
     gold_score = self._score_sentence(batch_feats, batch_tags)
     
+    # self.logger.log('score', forward_score, gold_score.shape)
+
     return (forward_score - gold_score).sum() / batch_tags.shape[0] 
   
   
@@ -357,28 +363,32 @@ class BiLSTM_CRF(nn.Module):
 
 
 
-  def _batch_viterbi_decode(self, batch_feats, batch_size):
-
+  def _batch_viterbi_decode(self, batch_feats, batch_tags):
+    batch_size = batch_tags.shape[0]
+    
     batch_feats = batch_feats.reshape(batch_size, -1, batch_feats.shape[1]) 
+    
+    batch_mask = batch_tags >= 0
 
-    batch_score = []
+    batch_path = []
 
     for j in range(batch_size):
-      feats_per_sent = batch_feats[j]
-      batch_score.append(self._viterbi_decode(feats_per_sent))
+      feats_per_sent = batch_feats[j][batch_mask[j]]
+   
+      batch_path.append(self._viterbi_decode(feats_per_sent))
 
-    return batch_score
+    return batch_path
 
 
-  def forward(self, inputs, input_chars=None, word_len_in_batch=None, perm_idx=None, device=None):
+  def forward(self, batch_inputs, batch_tags, input_chars=None, word_len_in_batch=None, perm_idx=None, device=None):
     '''
     inputs: batch_size, max_seq_len
     input_char: (batch_size*max_seq_len, max_word_len)
     word_len_in_batch: word_len in batch
     '''
-    batch_feats = self._get_lstm_features(inputs, input_chars, word_len_in_batch, perm_idx, device)
+    batch_feats = self._get_lstm_features(batch_inputs, input_chars, word_len_in_batch, perm_idx, device)
 
-    batch_score = self._batch_viterbi_decode(batch_feats, inputs.shape[0])
+    batch_path = self._batch_viterbi_decode(batch_feats, batch_tags)
 
     # (batch_size, (score, tag_seq))
-    return batch_score
+    return batch_path

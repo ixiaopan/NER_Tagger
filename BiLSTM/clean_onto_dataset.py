@@ -2,7 +2,7 @@ import re
 import numpy as np
 from utils import utils
 
-def clean_ontonotes_data():
+def clean_ontonotes_data(min_seq_len=2):
   # C:\\projects\\datasets\\ontonotes-release-5\\ontonotes-release-5.0\\data\\files\\data\\english\\annotations\\bc\\cctv\\00\\cctv_0000
   data = utils.read_json('./data/SafeSend-u6etyJgw6CwkFGXt/ontonotes_parsed.json')
 
@@ -126,6 +126,9 @@ def clean_ontonotes_data():
     for f in genre_file_content: # each file
       for s in f.values(): # each sentence
         tokens_in_sent, pos_in_sent = s['tokens'], s['pos']
+
+        if len(tokens_in_sent) <= min_seq_len:
+          continue
         
         # check data integrity
         assert len(tokens_in_sent) == len(pos_in_sent)
@@ -150,11 +153,15 @@ def clean_ontonotes_data():
         total_sent_count_in_genre += 1
         for i, word in enumerate(tokens_in_sent): # a token per line
           total_tokens_count_in_genre += 1
+          
+          word = re.sub('^/.$', '.', word)
+          if word == '.':
+            continue
   
           pos_tag = pos_in_sent[i]
 
           word = re.sub('"', '', word) # conficts with the '"' below
-          word = re.sub('^/.$', '.', word)
+          
           word = utils.zero_digit(word) # replace all digits with a single 0
 
           line = [

@@ -17,6 +17,16 @@ from torch.autograd import Variable
 # from nltk.tokenize import word_tokenize
 # from nltk.corpus import stopwords
 
+class Logger:
+  def __init__(self, debug):
+    self.debug = debug
+
+
+  def log(self, *text):
+    if self.debug:
+      print(*text)
+
+
 
 def save_model(filedir, state, is_best=False):
   '''
@@ -97,7 +107,9 @@ def init_baseline_model(model, data_dir, model_param_dir):
     use_char_embed = params['use_char_embed'], 
     char_embedding_dim = params['char_embed_dim'], 
     char_hidden_dim = params['char_hidden_dim'],
-    char2id = read_json(os.path.join(data_dir, 'char_id.json'))
+    char2id = read_json(os.path.join(data_dir, 'char_id.json')),
+
+    debug = params['debug']
   )
 
   if params['cuda']:
@@ -113,11 +125,15 @@ def save_text(filepath, text, transform_fn=None):
     os.mkdir(parent_directory)
 
   with open(filepath, 'w') as f:
-    for line in text:
+    for i, line in enumerate(text):
       if transform_fn:
         line = transform_fn(line)
-    
-      f.write('{}\n'.format(line))
+      
+      if i < len(text) - 1:
+        f.write('{}\n'.format(line))
+      else:
+        f.write('{}'.format(line))
+      
 
 
 
@@ -331,11 +347,13 @@ def build_ner_profile(
   
   # step 1
   split = {}
-  # word_counter = Counter()
+  word_counter = Counter()
   for name in ['train', 'valid', 'test']:
-    word_counter, sent_len = build_vocabulary(path.join(data_dir, name, 'sentences.txt'))
-    split[name + '_word_counter'] = word_counter
+    word_counter, sent_len = build_vocabulary(path.join(data_dir, name, 'sentences.txt'), word_counter)
+    # split[name + '_word_counter'] = word_counter
     data_statistics[name + '_sentence_len'] = sent_len
+  split['train_word_counter'] = word_counter
+
 
   tag_counter = Counter()
   for name in ['train', 'valid', 'test']:
@@ -415,10 +433,10 @@ def build_ner_profile(
   save_json(path.join(data_dir, 'id_word.json'), inverse_word_id)
   
   save_json(path.join(data_dir, 'tag_id.json'), tag_id)
-  save_json(path.join(data_dir, 'inverse_tag_id.json'), inverse_tag_id)
+  save_json(path.join(data_dir, 'id_tag.json'), inverse_tag_id)
 
   save_json(path.join(data_dir, 'char_id.json'), chars_id)
-  save_json(path.join(data_dir, 'inverse_char_id.json'), inverse_chars_id)
+  save_json(path.join(data_dir, 'id_char.json'), inverse_chars_id)
 
 
   if use_pre_trained and glove_word_dim:
@@ -432,7 +450,7 @@ def build_ner_profile(
 
 
 
-def build_onto_dataloader(data_dir, type='train', batch_size = 1, shuffle = True, is_cuda=False):
+def build_onto_dataloader(data_dir, type='train', batch_size = 1, shuffle = False, is_cuda=False):
   '''
   Refer: https://gist.github.com/HarshTrivedi/f4e7293e941b17d19058f6fb90ab0fec
 
@@ -475,11 +493,13 @@ def build_onto_dataloader(data_dir, type='train', batch_size = 1, shuffle = True
 
   # Step 2
   data_size = len(sentences)
+
   if shuffle:
     torch.manual_seed(45)
     rand_idx = torch.randperm(data_size)
   else:
     rand_idx = range(data_size)
+
 
   # Step 3
   # how many batches given the fixed 'batch_size'
@@ -503,7 +523,7 @@ def build_onto_dataloader(data_dir, type='train', batch_size = 1, shuffle = True
     # refer: https://github.com/cs230-stanford/cs230-code-examples/blob/master/pytorch/nlp/model/data_loader.py
     batch_max_len = max([len(s) for s in batch_sentences])
 
-    batch_data = word_id[PAD_WORD] * np.ones((batch_size, batch_max_len), dtype=int)
+    batch_data = word_id[PAD_WORD] * np.ones(( len(batch_sentences), batch_max_len ), dtype=int)
     # -1 corresponds to the word with padding, the loss of them will be ignored 
     batch_labels = -1 * np.ones((len(batch_sentences), batch_max_len), dtype=int)
     # (batch_size, max_seq_len)
@@ -541,13 +561,14 @@ def build_onto_dataloader(data_dir, type='train', batch_size = 1, shuffle = True
     word_len_in_batch = torch.LongTensor( [ len(s) for s in batch_chars ])
     max_word_len_in_batch = word_len_in_batch.max() # 8
 
+
     # Step 3.2.2, Pad with 0s
     # (batch_size*max_seq_len, max_word_len)
     fixed_char_in_batch = char_id[PAD_WORD] * torch.ones(
       ( len(batch_chars), max_word_len_in_batch ), 
       dtype=torch.long
     )
-    for idx, (seq, seqlen) in enumerate(zip(batch_chars, word_len_in_batch)):
+    for idx, (seq, seqlen) in enumerate( zip(batch_chars, word_len_in_batch) ):
       fixed_char_in_batch[idx, :seqlen] = torch.LongTensor(seq)
 
     # Step 3.2.3, sort instances in descending order
@@ -561,9 +582,13 @@ def build_onto_dataloader(data_dir, type='train', batch_size = 1, shuffle = True
 
 
     # Step 4
-    fixed_char_in_batch = Variable(fixed_char_in_batch)
-    batch_data = Variable(torch.LongTensor(batch_data))
-    batch_labels = Variable(torch.LongTensor(batch_labels))
+    # fixed_char_in_batch = Variable(fixed_char_in_batch)
+    # batch_data = Variable(torch.LongTensor(batch_data))
+    # batch_labels = Variable(torch.LongTensor(batch_labels))
+
+    fixed_char_in_batch = fixed_char_in_batch
+    batch_data = torch.LongTensor(batch_data)
+    batch_labels = torch.LongTensor(batch_labels)
 
     if is_cuda:
         fixed_char_in_batch, batch_data, batch_labels = fixed_char_in_batch.cuda(), batch_data.cuda(), batch_labels.cuda()
