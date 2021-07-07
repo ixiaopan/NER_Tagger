@@ -3,3 +3,4 @@ pandas
 torch>=1.2
 tqdm
 nltk
+scikit-learn

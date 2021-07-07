@@ -80,7 +80,7 @@ def prepare_model_params(data_dir, model_param_dir, seed=45):
   return params
 
 
-def init_baseline_model(model, data_dir, model_param_dir):
+def init_baseline_model(models, data_dir, model_param_dir):
   '''
   initialise the baseline model
   @params:
@@ -95,7 +95,8 @@ def init_baseline_model(model, data_dir, model_param_dir):
   if bool(params['use_pre_trained']):
     pre_word_embedding = np.load(os.path.join(data_dir, 'pre_word_embedding.npy'))
 
-  model = model(
+
+  model = models(
     vocab_size = params['vocab_size'], 
     hidden_dim = params['hidden_dim'], 
     embedding_dim = params['word_embed_dim'], 
@@ -109,7 +110,7 @@ def init_baseline_model(model, data_dir, model_param_dir):
     char_hidden_dim = params['char_hidden_dim'],
     char2id = read_json(os.path.join(data_dir, 'char_id.json')),
 
-    debug = params['debug']
+    device=params['device']
   )
 
   if params['cuda']:
@@ -300,6 +301,7 @@ def load_ner_data(filename, encoding="utf8"):
 def build_ner_profile(
   data_dir, 
   min_word_freq=1, 
+  use_char_embed=False,
   use_pre_trained=False,
   glove_word_dim=50,  # 50, 100, 200, 300
   augment_vocab_from_glove=False, 
@@ -320,6 +322,7 @@ def build_ner_profile(
   STOP_TAG = '_STOP_'
 
   data_statistics = {
+    'use_char_embed': use_char_embed,
     'use_pre_trained': use_pre_trained,
     'glove_word_dim': glove_word_dim,
     'augment_vocab_from_glove': augment_vocab_from_glove,
@@ -493,7 +496,6 @@ def build_onto_dataloader(data_dir, type='train', batch_size = 1, shuffle = Fals
 
   # Step 2
   data_size = len(sentences)
-
   if shuffle:
     torch.manual_seed(45)
     rand_idx = torch.randperm(data_size)
@@ -501,8 +503,7 @@ def build_onto_dataloader(data_dir, type='train', batch_size = 1, shuffle = Fals
     rand_idx = range(data_size)
 
 
-  # Step 3
-  # how many batches given the fixed 'batch_size'
+  # Step 3 fetch data, how many batches given the fixed 'batch_size'
   for i in range((data_size // batch_size + (0 if data_size % batch_size == 0 else 1))):
     # define some terms
     # seq_len: the number of words in a setence
@@ -582,16 +583,15 @@ def build_onto_dataloader(data_dir, type='train', batch_size = 1, shuffle = Fals
 
 
     # Step 4
-    # fixed_char_in_batch = Variable(fixed_char_in_batch)
-    # batch_data = Variable(torch.LongTensor(batch_data))
-    # batch_labels = Variable(torch.LongTensor(batch_labels))
-
     fixed_char_in_batch = fixed_char_in_batch
-    batch_data = torch.LongTensor(batch_data)
-    batch_labels = torch.LongTensor(batch_labels)
+    # force batch_size=1
+    batch_data = torch.LongTensor(batch_data.flatten())
+    batch_labels = torch.LongTensor(batch_labels.flatten())
+    # batch_data = torch.LongTensor(batch_data)
+    # batch_labels = torch.LongTensor(batch_labels)
 
     if is_cuda:
-        fixed_char_in_batch, batch_data, batch_labels = fixed_char_in_batch.cuda(), batch_data.cuda(), batch_labels.cuda()
+      fixed_char_in_batch, batch_data, batch_labels = fixed_char_in_batch.cuda(), batch_data.cuda(), batch_labels.cuda()
 
     yield batch_data, batch_labels, fixed_char_in_batch, word_len_in_batch, perm_idx
 
@@ -622,7 +622,6 @@ def build_custom_dataloader(data_dir, names = ['train', 'valid', 'test'], batch_
     #     split[name] = data_loader
     
     # return split.values()
-
 
 
 
