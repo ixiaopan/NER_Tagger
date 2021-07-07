@@ -94,7 +94,7 @@ def train_and_evaluate(
       }, is_best)
 
       if is_best:
-        model.logger.log('best', best_metric, best_metric_score)
+        print('best', best_metric, best_metric_score)
         utils.save_text(os.path.join(exper_type_dir, 'eval_valid_best_result.txt'), summary_word_tag_pred)
         utils.save_text(os.path.join(exper_type_dir, 'eval_valid_best_metric.txt'), val_metrics_str.split(', '))
 

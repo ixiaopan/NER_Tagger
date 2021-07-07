@@ -3,6 +3,8 @@ import numpy as np
 from utils import utils
 
 def clean_ontonotes_data(min_seq_len=2, min_word_len=1):
+  print('=== cleaning dataset ===')
+
   # C:\\projects\\datasets\\ontonotes-release-5\\ontonotes-release-5.0\\data\\files\\data\\english\\annotations\\bc\\cctv\\00\\cctv_0000
   data = utils.read_json('./data/SafeSend-u6etyJgw6CwkFGXt/ontonotes_parsed.json')
 

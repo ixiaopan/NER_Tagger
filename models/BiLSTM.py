@@ -191,12 +191,11 @@ class BiLSTM_CRF(nn.Module):
 
       # the obtained concat_char_embedding is sorted in descending order by seq_len
       # however, the inputs is the original inputs, so we need map them correctly so as to concate them later
-      concat_char_embed = torch.zeros_like(concat_char_embed_sorted)
+      concat_char_embed = torch.zeros_like(concat_char_embed_sorted).to(self.device)
       for i in range(concat_char_embed.size(0)):
         concat_char_embed[perm_idx[i]] = concat_char_embed_sorted[i]
-      concat_char_embed.to(self.device)
 
-    
+  
     if self.use_char_embed:
       # (seq_n, embed_dim)
       embed_words = self.word_embed(inputs)
