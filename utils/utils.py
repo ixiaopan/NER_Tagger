@@ -350,19 +350,17 @@ def build_ner_profile(
   
   # step 1
   split = {}
-  word_counter = Counter()
   for name in ['train', 'valid', 'test']:
-    word_counter, sent_len = build_vocabulary(path.join(data_dir, name, 'sentences.txt'), word_counter)
-    # split[name + '_word_counter'] = word_counter
+    word_counter, sent_len = build_vocabulary(path.join(data_dir, name, 'sentences.txt'))
+    split[name + '_word_counter'] = word_counter
     data_statistics[name + '_sentence_len'] = sent_len
-  split['train_word_counter'] = word_counter
 
 
   tag_counter = Counter()
   for name in ['train', 'valid', 'test']:
     tag_counter, tag_sent_len = build_vocabulary(path.join(data_dir, name, 'labels.txt'), tag_counter)
-    # split[name + '_tag_counter'] = tag_counter
     data_statistics[name + '_tag_sentence_len'] = tag_sent_len
+
 
   # should have the same number of lines
   for name in ['train', 'valid', 'test']:

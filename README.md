@@ -58,7 +58,7 @@
 
 ```bash
 # build vocabulary, word_id, tag_id, pre_trained word embedding for each domain
-~ python build_onto_profile.py --data_dir='./data/toy' --use_pre_trained
+~ python build_onto_profile.py --data_dir='./data/toy'
 
 ~ python train_baseline.py --data_dir='./data/toy'
 

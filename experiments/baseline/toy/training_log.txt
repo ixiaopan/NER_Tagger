@@ -1,9 +1,0 @@
-Wed Jul  7 11:34:43 2021
-train loss: 10061.8585, valid_accuracy: 7.1429, valid_micro_precision: 7.1429, valid_macro_precision: 2.5641, valid_micro_recall: 7.1429, valid_macro_recall: 4.1667, valid_micro_f1: 7.1429, valid_macro_f1: 3.1746
-train loss: 10021.8142, valid_accuracy: 0.0, valid_micro_precision: 0.0, valid_macro_precision: 0.0, valid_micro_recall: 0.0, valid_macro_recall: 0.0, valid_micro_f1: 0.0, valid_macro_f1: 0.0
-train loss: 10013.2834, valid_accuracy: 0.0, valid_micro_precision: 0.0, valid_macro_precision: 0.0, valid_micro_recall: 0.0, valid_macro_recall: 0.0, valid_micro_f1: 0.0, valid_macro_f1: 0.0
-train loss: 10009.3347, valid_accuracy: 0.0, valid_micro_precision: 0.0, valid_macro_precision: 0.0, valid_micro_recall: 0.0, valid_macro_recall: 0.0, valid_micro_f1: 0.0, valid_macro_f1: 0.0
-train loss: 10007.6977, valid_accuracy: 0.0, valid_micro_precision: 0.0, valid_macro_precision: 0.0, valid_micro_recall: 0.0, valid_macro_recall: 0.0, valid_micro_f1: 0.0, valid_macro_f1: 0.0
-train loss: 10005.6863, valid_accuracy: 2.381, valid_micro_precision: 2.381, valid_macro_precision: 12.5, valid_micro_recall: 2.381, valid_macro_recall: 3.125, valid_micro_f1: 2.381, valid_macro_f1: 5.0
-train loss: 10004.3734, valid_accuracy: 2.381, valid_micro_precision: 2.381, valid_macro_precision: 12.5, valid_micro_recall: 2.381, valid_macro_recall: 3.125, valid_micro_f1: 2.381, valid_macro_f1: 5.0
-train loss: 10003.3160, valid_accuracy: 2.381, valid_micro_precision: 2.381, valid_macro_precision: 12.5, valid_micro_recall: 2.381, valid_macro_recall: 3.125, valid_micro_f1: 2.381, valid_macro_f1: 5.0

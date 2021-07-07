@@ -11,7 +11,7 @@ from eval_baseline import evaluate
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir', default='./data/toy', help="Directory containing the dataset")
-parser.add_argument('--best_metric', default='accuracy', help="metric used to obtain the best model")
+parser.add_argument('--best_metric', default='micro_f1', help="metric used to obtain the best model")
 parser.add_argument('--model_param_dir', default='./experiments/baseline', help="Directory containing model parameters")
 
 
@@ -94,6 +94,7 @@ def train_and_evaluate(
       }, is_best)
 
       if is_best:
+        model.logger.log('best', best_metric, best_metric_score)
         utils.save_text(os.path.join(exper_type_dir, 'eval_valid_best_result.txt'), summary_word_tag_pred)
         utils.save_text(os.path.join(exper_type_dir, 'eval_valid_best_metric.txt'), val_metrics_str.split(', '))
 

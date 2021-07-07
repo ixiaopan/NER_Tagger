@@ -68,12 +68,12 @@ def macro_f1(y_true, y_pred):
 
 metrics = {
   'accuracy': accuracy,
+  'micro_f1': micro_f1,
+  'macro_f1': macro_f1,
   'micro_precision': micro_precision,
   'macro_precision': macro_precision,
   'micro_recall': micro_recall,
   'macro_recall': macro_recall,
-  'micro_f1': micro_f1,
-  'macro_f1': macro_f1,
   # 'confusion_matrix': confusion_matrix
 }
 
@@ -134,6 +134,7 @@ if __name__ == '__main__':
   # load model
   model = utils.load_model(os.path.join(exper_datatype_dir, 'best.pth.tar'), model)
 
+  print('=== Score ===')
   # save logs
   test_metrics, summary_batch_str, _ = evaluate(data_dir, args.dataset_type, model, params, eval_dir=exper_datatype_dir)
   print(summary_batch_str)
