@@ -2,7 +2,7 @@ import re
 import numpy as np
 from utils import utils
 
-def clean_ontonotes_data(min_seq_len=2):
+def clean_ontonotes_data(min_seq_len=2, min_word_len=1):
   # C:\\projects\\datasets\\ontonotes-release-5\\ontonotes-release-5.0\\data\\files\\data\\english\\annotations\\bc\\cctv\\00\\cctv_0000
   data = utils.read_json('./data/SafeSend-u6etyJgw6CwkFGXt/ontonotes_parsed.json')
 
@@ -90,11 +90,10 @@ def clean_ontonotes_data(min_seq_len=2):
       for p in data.keys() 
   ])
   file_content_list = list(data.values())
-  
-  # simple stats
+
+  # dataset stats
   meta_data['total_files'] = len(genre_each_file)
   meta_data['total_sentences'] = sum([ len(f) for f in file_content_list ] )
-
 
   # extract entities
   entity_type = set()
@@ -111,9 +110,7 @@ def clean_ontonotes_data(min_seq_len=2):
     genre_indexes = np.where(genre_each_file == g)[0]
     genre_file_content = [ file_content_list[i] for i in genre_indexes ]
     
-    # Sentence #,Word,POS,Tag
-    # Sentence: 1,Thousands,NNS,O
-    # ,of,IN,O
+    
     genre_corpus = [['Sentence #', 'Word', 'POS', 'Tag']] # header
     total_sent_count_in_genre = 0
     total_tokens_count_in_genre = 0
@@ -125,11 +122,15 @@ def clean_ontonotes_data(min_seq_len=2):
 
     for f in genre_file_content: # each file
       for s in f.values(): # each sentence
+        total_sent_count_in_genre += 1
+
         tokens_in_sent, pos_in_sent = s['tokens'], s['pos']
 
-        if len(tokens_in_sent) <= min_seq_len:
+        # skip meaningless sentence
+        if len(tokens_in_sent) < min_seq_len:
           continue
-        
+
+
         # check data integrity
         assert len(tokens_in_sent) == len(pos_in_sent)
 
@@ -149,30 +150,32 @@ def clean_ontonotes_data(min_seq_len=2):
                 total_tokens_count_by_entity_in_genre[ne_type] += 1
                 named_entities_per_sent[idx] = ('B-' if i == 0 else 'I-' ) + ne_type
 
-        # save
-        total_sent_count_in_genre += 1
-        for i, word in enumerate(tokens_in_sent): # a token per line
+ 
+        # save      
+        for i, word in enumerate(tokens_in_sent): # a token per sentence
           total_tokens_count_in_genre += 1
           
           word = re.sub('^/.$', '.', word)
-          if word == '.':
-            continue
-  
-          pos_tag = pos_in_sent[i]
-
+          # if the word is exactly '"', it will cause error due to empty string
           word = re.sub('"', '', word) # conficts with the '"' below
-          
           word = utils.zero_digit(word) # replace all digits with a single 0
 
+          # skip meaningless words
+          if len(word) < min_word_len:
+            continue
+
+          # Sentence: 1,Thousands,NNS,O
+          # ,of,IN,O
+          pos_tag = pos_in_sent[i]
           line = [
             'Sentence {}'.format(total_sent_count_in_genre) if i == 0 else '', 
+            # because the default separater in '.csv' is comma, we need to quote them to avoid error
             '"' + word + '"' if ',' in word else word, 
             '"' + pos_tag + '"'  if ',' in pos_tag else pos_tag, 
             named_entities_per_sent[i]
           ]
 
           genre_corpus.append(line)
-
 
     total_tokens_ratio_by_entity_in_genre = {}
     total_tokens_with_ne_in_genre = sum(total_tokens_count_by_entity_in_genre.values()) # tokens that are named entities

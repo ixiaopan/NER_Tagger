@@ -478,15 +478,17 @@ def build_onto_dataloader(data_dir, type='train', batch_size = 1, shuffle = Fals
   with open(path.join(data_dir, type, 'sentences.txt')) as f:
     for line in f.read().split('\n'): # for each line
       sent = [ word_id[w] if w in word_id else word_id[UNK_WORD] 
-          for w in line.split(' ') ]
+          for w in line.split() ]
       sentences.append(sent)
 
 
   with open(path.join(data_dir, type, 'labels.txt')) as f:
     for line in f.read().split('\n'): # for each line
-      tag_line = [ tag_id[t] for t in line.split(' ') ]
+      tag_line = [ tag_id[t] for t in line.split() ]
       tags.append(tag_line)
 
+
+  # check data integrity
   assert len(sentences) == len(tags)
   for i in range(len(sentences)):
     assert len(sentences[i]) == len(tags[i])

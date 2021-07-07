@@ -34,10 +34,6 @@
 
 # clean ontonotes dataset & extract each domain
 ~ sh clean.sh
-
-# split each domain dataset into train, valid, and test
-# if domain is not specified, it will loop all domain
-~ python build_onto_dataset.py --domain='bc'
 ```
 
 - bc
@@ -50,7 +46,6 @@
   - test
     - sentences.txt
     - labels.txt
-
 
 
 

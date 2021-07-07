@@ -134,8 +134,8 @@ if __name__ == '__main__':
   # load model
   model = utils.load_model(os.path.join(exper_datatype_dir, 'best.pth.tar'), model)
 
-  print('=== Score ===')
   # save logs
+  print('=== Score ===')
   test_metrics, summary_batch_str, _ = evaluate(data_dir, args.dataset_type, model, params, eval_dir=exper_datatype_dir)
   print(summary_batch_str)
   
