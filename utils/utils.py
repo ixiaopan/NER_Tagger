@@ -475,14 +475,14 @@ def build_onto_dataloader(data_dir, type='train', batch_size = 1, shuffle = True
 
   # Step 1
   sentences, tags = [], []
-  with open(path.join(data_dir, type, 'sentences.txt')) as f:
+  with open(path.join(data_dir, type, 'sentences.txt'), encoding="utf8") as f:
     for line in f.read().split('\n'): # for each line
       sent = [ word_id[w] if w in word_id else word_id[UNK_WORD] 
           for w in line.split() ]
       sentences.append(sent)
 
 
-  with open(path.join(data_dir, type, 'labels.txt')) as f:
+  with open(path.join(data_dir, type, 'labels.txt'), encoding="utf8") as f:
     for line in f.read().split('\n'): # for each line
       tag_line = [ tag_id[t] for t in line.split() ]
       tags.append(tag_line)
