@@ -125,7 +125,7 @@ def save_text(filepath, text, transform_fn=None):
   if not os.path.exists(parent_directory):
     os.mkdir(parent_directory)
 
-  with open(filepath, 'w') as f:
+  with open(filepath, 'w', encoding="utf8") as f:
     for i, line in enumerate(text):
       if transform_fn:
         line = transform_fn(line)
