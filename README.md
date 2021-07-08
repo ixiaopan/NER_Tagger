@@ -54,11 +54,10 @@
 ### Baseline
 
 ```bash
-# which is equivalent to the following three lines
+# which is equivalent to the following lines
 ~ sh baseline.sh toy
 
 # build vocabulary, word_id, tag_id, pre_trained word embedding for each domain
-~ python build_onto_profile.py --data_dir='./data/toy'
 
 ~ python train_baseline.py --data_dir='./data/toy'
 
@@ -67,11 +66,8 @@
 
 ### Pool
 ```bash
-# equivalent to the following three lines
+# equivalent to the following lines
 ~ sh pool.sh
-
-
-~ python build_onto_profile.py --data_dir='./data/pool'
 
 ~ python train_baseline.py --data_dir='./data/pool'
 
