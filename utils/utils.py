@@ -451,7 +451,7 @@ def build_ner_profile(
 
 
 
-def build_onto_dataloader(data_dir, type='train', batch_size = 1, shuffle = False, is_cuda=False):
+def build_onto_dataloader(data_dir, type='train', batch_size = 1, shuffle = True, is_cuda=False):
   '''
   Refer: https://gist.github.com/HarshTrivedi/f4e7293e941b17d19058f6fb90ab0fec
 

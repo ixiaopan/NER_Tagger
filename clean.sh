@@ -3,4 +3,4 @@ find ./data -maxdepth 1 ! -name 'glove.6B' ! -name 'glove.6B.zip' ! -name 'toy' 
 
 python clean_onto_dataset.py
 
-python build_onto_dataset.py
+python split_onto_dataset.py

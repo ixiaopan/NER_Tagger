@@ -4,20 +4,23 @@ import numpy as np
 
 from utils import utils
 
-
 parser = argparse.ArgumentParser()
 parser.add_argument('--domain', help="domain name")
 
 if __name__ == '__main__':
   args = parser.parse_args()
 
-  data_summary = utils.read_json('./data/data_summary.json')
-
   print('=== split dataset into train, valid and test ===')
 
-  for type in ([ args.domain ] if args.domain else data_summary['genres'].keys()):
+  data_summary = utils.read_json('./data/data_summary.json')
+  if args.domain:
+    domains = [ args.domain ]
+  else:
+    domains = list(data_summary['genres'].keys()) + ['pool']
+
+  for type in domains:
     corpus, corpus_tag = utils.load_ner_data(os.path.join('./data', type, 'dataset.csv'))
-  
+
     corpus = np.array(corpus, dtype=object)
     corpus_tag = np.array(corpus_tag, dtype=object)
 
@@ -27,4 +30,4 @@ if __name__ == '__main__':
 
     print(' - {} done'.format(type))
 
-  print('=== We\'re done ===')
+  print('\n=== We\'re done ===')

@@ -282,7 +282,7 @@ class BiLSTM_CRF(nn.Module):
   def _viterbi_decode(self, feats):
     backpointers = []
 
-    init_score = torch.full((1, self.num_of_tag), -10000, device=self.device)
+    init_score = torch.full((1, self.num_of_tag), -10000., device=self.device)
     init_score[0][self.tag2id[START_TAG]] = 0
 
     for feat in feats:
