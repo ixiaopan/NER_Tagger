@@ -2,7 +2,7 @@
 
 data_dir='./data/pool'
 
-python build_onto_profile.py --data_dir=$data_dir
+# python build_onto_profile.py --data_dir=$data_dir
 
 python train_baseline.py --data_dir=$data_dir
 
