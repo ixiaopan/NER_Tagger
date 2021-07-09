@@ -96,7 +96,7 @@ def train_and_evaluate(
       if is_best:
         print('best', best_metric, best_metric_score)
         utils.save_text(os.path.join(exper_type_dir, 'eval_valid_best_result.txt'), summary_word_tag_pred)
-        utils.save_text(os.path.join(exper_type_dir, 'eval_valid_best_metric.txt'), val_metrics_str.split(', '))
+        utils.save_text(os.path.join(exper_type_dir, 'eval_valid_best_metric.txt'), ('Epoch ' + str((epoch + 1)) + ', ' + val_metrics_str).split(', '))
 
 
       # log...

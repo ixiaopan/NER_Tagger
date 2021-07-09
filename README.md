@@ -66,10 +66,8 @@
 
 ### Pool
 ```bash
-# equivalent to the following lines
-~ sh pool.sh
 
-~ python train_baseline.py --data_dir='./data/pool'
+~ python train_baseline.py --data_dir='./data/pool' --model_param_dir='./experiments/pool'
 
 ~ python eval_baseline.py --data_dir='./data/mz'
 ```
