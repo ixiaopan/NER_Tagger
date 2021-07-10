@@ -132,7 +132,10 @@ if __name__ == '__main__':
   exper_datatype_dir = os.path.join(model_param_dir, data_dir.split('/')[-1])
 
   # load model
-  model = utils.load_model(os.path.join(exper_datatype_dir, 'best.pth.tar'), model)
+  if 'pool' in model_param_dir:
+    model = utils.load_model(os.path.join(model_param_dir, 'pool', 'best.pth.tar'), model)
+  else:
+    model = utils.load_model(os.path.join(exper_datatype_dir, 'best.pth.tar'), model)
 
   # save logs
   print('=== Score ===')
