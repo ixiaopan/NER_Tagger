@@ -12,11 +12,22 @@ if __name__ == '__main__':
 
   print('=== split dataset into train, valid and test ===')
 
+  pool_data = {
+    'train_sentences': [],
+    'train_labels': [],
+    
+    'valid_sentences': [],
+    'valid_labels': [],
+    
+    'test_sentences': [],
+    'test_labels': []
+  }
+
   data_summary = utils.read_json('./data/data_summary.json')
   if args.domain:
     domains = [ args.domain ]
   else:
-    domains = list(data_summary['genres'].keys()) + ['pool']
+    domains = list(data_summary['genres'].keys())
 
   for type in domains:
     corpus, corpus_tag = utils.load_ner_data(os.path.join('./data', type, 'dataset.csv'))
@@ -25,9 +36,17 @@ if __name__ == '__main__':
     corpus_tag = np.array(corpus_tag, dtype=object)
 
     for name, X, y in utils.split_train_val_test(corpus, corpus_tag):
+      if args.domain is None and type != 'pt': # we don't include 'pt'
+        pool_data[name + '_sentences'] += list(X)
+        pool_data[name + '_labels'] += list(y)
+
       utils.save_text(os.path.join('./data', type, name, 'sentences.txt'), X, lambda s: ' '.join(s))
       utils.save_text(os.path.join('./data', type, name, 'labels.txt'), y, lambda s: ' '.join(s))
-
+  
     print(' - {} done'.format(type))
 
-  print('\n=== We\'re done ===')
+  for name in ['train', 'valid', 'test']:
+    utils.save_text(os.path.join('./data/pool', name, 'sentences.txt'), pool_data[name + '_sentences'], lambda s: ' '.join(s))
+    utils.save_text(os.path.join('./data/pool', name, 'labels.txt'), pool_data[name + '_labels'], lambda s: ' '.join(s))
+
+  print('=== pool done ===')

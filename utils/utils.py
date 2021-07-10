@@ -59,7 +59,7 @@ def load_model(filepath, model, optimiser=None):
 
 
 
-def prepare_model_params(data_dir, model_param_dir, seed=45):
+def prepare_model_params(data_dir, model_param_dir):
   # GPU available
   is_cuda = torch.cuda.is_available()
   device = torch.device('cuda' if is_cuda else 'cpu')
@@ -70,8 +70,7 @@ def prepare_model_params(data_dir, model_param_dir, seed=45):
   params['device'] = device
 
   # for reproducibility
-  torch.manual_seed(seed)
-
+  torch.manual_seed(45)
 
   # merge dataset params
   data_params = read_json(os.path.join(data_dir, 'dataset_params.json'))
@@ -123,7 +122,7 @@ def init_baseline_model(models, data_dir, model_param_dir):
 def save_text(filepath, text, transform_fn=None):
   parent_directory = os.path.dirname(filepath)
   if not os.path.exists(parent_directory):
-    os.mkdir(parent_directory)
+    os.makedirs(parent_directory)
 
   with open(filepath, 'w', encoding="utf8") as f:
     for i, line in enumerate(text):
@@ -141,7 +140,7 @@ def save_text(filepath, text, transform_fn=None):
 def save_json(filepath, text):
   parent_directory = os.path.dirname(filepath)
   if not os.path.exists(parent_directory):
-    os.mkdir(parent_directory)
+    os.makedirs(parent_directory)
 
   with open(filepath, 'w') as f:
     json.dump(text, f, indent=4)
@@ -162,6 +161,7 @@ def split_train_val_test(corpus, corpus_tag, shuffle=True):
   valid_cutoff = int(0.8 * total_len)
 
   if shuffle:
+    np.random.seed(10)
     rand_idx = np.random.permutation(total_len)
   else:
     rand_idx = np.arange(total_len)

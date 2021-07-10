@@ -9,7 +9,7 @@ from torch.nn import init
 import numpy as np
 from utils import utils
 
-torch.manual_seed(2)
+torch.manual_seed(45)
 
 
 
