@@ -13,7 +13,7 @@ from models.BiLSTM import BiLSTM_CRF
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--data_dir', default='./data/toy', help="Directory containing the dataset")
+parser.add_argument('--data_dir', default='./data/toy', help="dataset to be tested")
 parser.add_argument('--dataset_type', default='test', help="dataset typep")
 parser.add_argument('--model_param_dir', default='./experiments/baseline', help="Directory containing model parameters")
 
@@ -121,24 +121,33 @@ if __name__ == '__main__':
   args = parser.parse_args()
   data_dir, model_param_dir = args.data_dir, args.model_param_dir
 
+  # default: baseline
+  trained_dir = data_dir
+  if 'pool' in model_param_dir:
+    trained_dir = './data/pool'
+
   # define model
-  model, params = utils.init_baseline_model(BiLSTM_CRF, data_dir, model_param_dir)
+  model, params = utils.init_baseline_model(BiLSTM_CRF, trained_dir, model_param_dir)
   print('=== parameters ===')
   print(params)
 
   print('=== model ===')
   print(model)
 
-  exper_datatype_dir = os.path.join(model_param_dir, data_dir.split('/')[-1])
-
   # load model
   if 'pool' in model_param_dir:
     model = utils.load_model(os.path.join(model_param_dir, 'pool', 'best.pth.tar'), model)
-  else:
-    model = utils.load_model(os.path.join(exper_datatype_dir, 'best.pth.tar'), model)
+  else: # baseline
+    model = utils.load_model(os.path.join(model_param_dir, data_dir.split('/')[-1], 'best.pth.tar'), model)
 
   # save logs
   print('=== Score ===')
-  test_metrics, summary_batch_str, _ = evaluate(data_dir, args.dataset_type, model, params, eval_dir=exper_datatype_dir)
+  test_metrics, summary_batch_str, _ = evaluate(
+    data_dir, 
+    args.dataset_type, 
+    model, 
+    params, 
+    eval_dir=os.path.join(model_param_dir, data_dir.split('/')[-1])
+  )
   print(summary_batch_str)
   

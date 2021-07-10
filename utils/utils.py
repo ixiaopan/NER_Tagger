@@ -85,7 +85,7 @@ def init_baseline_model(models, data_dir, model_param_dir):
   initialise the baseline model
   @params:
     model: baseline model in this case
-    data_dir: which dataset to be used to train
+    data_dir: dataset used to be trained
     model_param_dir: experiment params
   '''
   params = prepare_model_params(data_dir, model_param_dir)
