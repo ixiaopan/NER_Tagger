@@ -9,12 +9,18 @@ from utils import utils
 from models.BiLSTM import BiLSTM_CRF
 from eval_baseline import evaluate
 
+from knockknock import teams_sender
+from configparser import ConfigParser
+
+config_parser = ConfigParser()
+config_parser.read('config.ini')
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir', default='./data/toy', help="Directory containing the dataset")
 parser.add_argument('--best_metric', default='micro_f1', help="metric used to obtain the best model")
 parser.add_argument('--model_param_dir', default='./experiments/baseline', help="Directory containing model parameters")
 
-
+@teams_sender(webhook_url=config_parser['WEBHOOK']['teams'])
 def train_and_evaluate(
   domain_data_dir, 
   model_param_dir='./experiments/baseline', 
@@ -112,7 +118,6 @@ def train_and_evaluate(
   # training done
   utils.save_text(os.path.join(exper_type_dir, 'training_log.txt'), training_log)
   print('Training time: ', time.strftime("%H:%M:%S", time.gmtime(time.time() - start_time)))
-
 
 
 if __name__ == '__main__':
