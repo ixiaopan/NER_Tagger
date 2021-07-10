@@ -78,7 +78,7 @@ metrics = {
 }
 
 
-def evaluate(data_dir, type, model, params, eval_dir=False):
+def evaluate(data_dir, type, model, params, eval_dir):
   model.eval()
   
   id_word = utils.read_json(os.path.join(data_dir, 'id_word.json'))
@@ -120,25 +120,21 @@ def evaluate(data_dir, type, model, params, eval_dir=False):
 if __name__ == '__main__':
   args = parser.parse_args()
   data_dir, model_param_dir = args.data_dir, args.model_param_dir
-
-  # default: baseline
-  trained_dir = data_dir
-  if 'pool' in model_param_dir:
-    trained_dir = './data/pool'
-
+  
   # define model
-  model, params = utils.init_baseline_model(BiLSTM_CRF, trained_dir, model_param_dir)
+  model, params = utils.init_baseline_model(BiLSTM_CRF, data_dir, model_param_dir)
   print('=== parameters ===')
   print(params)
 
   print('=== model ===')
   print(model)
 
+  transfer_method = model_param_dir.split('/')[-1] # pool, pool_init
   # load model
-  if 'pool' in model_param_dir:
-    model = utils.load_model(os.path.join(model_param_dir, 'pool', 'best.pth.tar'), model)
-  else: # baseline
+  if 'baseline' in model_param_dir:
     model = utils.load_model(os.path.join(model_param_dir, data_dir.split('/')[-1], 'best.pth.tar'), model)
+  else: # baseline
+    model = utils.load_model(os.path.join(model_param_dir, transfer_method, 'best.pth.tar'), model)
 
   # save logs
   print('=== Score ===')

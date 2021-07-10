@@ -59,7 +59,7 @@
 
 # build vocabulary, word_id, tag_id, pre_trained word embedding for each domain
 
-~ python train_baseline.py --data_dir='./data/toy'
+~ python train_baseline.py --train_data_dir='./data/toy'
 
 ~ python eval_baseline.py --data_dir='./data/toy'
 ```
@@ -67,9 +67,9 @@
 ### Pool
 ```bash
 
-~ python train_baseline.py --data_dir='./data/pool' --model_param_dir='./experiments/pool'
+~ python train_baseline.py --train_data_dir='./data/pool' --model_param_dir='./experiments/pool'
 
-~ python eval_baseline.py --data_dir='./data/mz'
+~ python eval_baseline.py --data_dir='./data/mz' --model_param_dir='./experiments/pool'
 ```
 
 

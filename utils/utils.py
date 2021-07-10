@@ -59,7 +59,7 @@ def load_model(filepath, model, optimiser=None):
 
 
 
-def prepare_model_params(data_dir, model_param_dir):
+def prepare_model_params(data_params_dir, model_param_dir):
   # GPU available
   is_cuda = torch.cuda.is_available()
   device = torch.device('cuda' if is_cuda else 'cpu')
@@ -73,33 +73,42 @@ def prepare_model_params(data_dir, model_param_dir):
   torch.manual_seed(45)
 
   # merge dataset params
-  data_params = read_json(os.path.join(data_dir, 'dataset_params.json'))
+  data_params = read_json(os.path.join(data_params_dir, 'dataset_params.json'))
   params.update(data_params)
 
   return params
 
 
-def init_baseline_model(models, data_dir, model_param_dir):
+def init_baseline_model(models, train_data_dir, model_param_dir):
   '''
   initialise the baseline model
   @params:
-    model: baseline model in this case
-    data_dir: dataset used to be trained
+    models: baseline model in this case
+    train_data_dir:
     model_param_dir: experiment params
   '''
-  params = prepare_model_params(data_dir, model_param_dir)
+
+  '''
+  data_params_dir: dataset params used to config ner model
+      - individual domain: bc, mz
+      - pool domain: utilize all avaliable data from all domains
+  '''
+  data_params_dir = train_data_dir
+  if 'pool' in model_param_dir: # using pool
+    data_params_dir = './data/pool'
+
+  params = prepare_model_params(data_params_dir, model_param_dir)
 
   # define model
   pre_word_embedding=None
   if bool(params['use_pre_trained']):
-    pre_word_embedding = np.load(os.path.join(data_dir, 'pre_word_embedding.npy'))
-
+    pre_word_embedding = np.load(os.path.join(data_params_dir, 'pre_word_embedding.npy'))
 
   model = models(
     vocab_size = params['vocab_size'], 
     hidden_dim = params['hidden_dim'], 
     embedding_dim = params['word_embed_dim'], 
-    tag2id = read_json(os.path.join(data_dir, 'tag_id.json')), 
+    tag2id = read_json(os.path.join(data_params_dir, 'tag_id.json')), 
 
     dropout = params['dropout'], 
     pre_word_embedding=pre_word_embedding,
@@ -107,7 +116,7 @@ def init_baseline_model(models, data_dir, model_param_dir):
     use_char_embed = params['use_char_embed'], 
     char_embedding_dim = params['char_embed_dim'], 
     char_hidden_dim = params['char_hidden_dim'],
-    char2id = read_json(os.path.join(data_dir, 'char_id.json')),
+    char2id = read_json(os.path.join(data_params_dir, 'char_id.json')),
 
     device=params['device']
   )
