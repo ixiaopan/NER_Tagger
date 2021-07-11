@@ -159,6 +159,8 @@ def clean_ontonotes_data(min_seq_len=2, min_word_len=1):
           total_tokens_count_in_genre += 1
           
           word = re.sub('^/.$', '.', word)
+          word = re.sub('^``$', '', word)
+          word = re.sub("^''$", '', word)
           # if the word is exactly '"', it will cause error due to empty string
           word = re.sub('"', '', word) # conficts with the '"' below
           word = utils.zero_digit(word) # replace all digits with a single 0

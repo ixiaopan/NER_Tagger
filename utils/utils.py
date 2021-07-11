@@ -326,13 +326,12 @@ def build_ner_profile(
     'glove_word_dim': glove_word_dim,
     'augment_vocab_from_glove': augment_vocab_from_glove,
     
-    'train_sentence_len': 0,
-    'valid_sentence_len': 0,
-    'test_sentence_len': 0,
-    
-    'train_tag_sentence_len': 0,
-    'valid_tag_sentence_len': 0,
-    'test_tag_sentence_len': 0,
+    'train_sent_size': 0,
+    'valid_sent_size': 0,
+    'test_sent_size': 0,
+    'train_label_size': 0,
+    'valid_label_size': 0,
+    'test_label_size': 0,
 
     'vocab_size': 0,
     'pad_word': PAD_WORD,
@@ -341,7 +340,6 @@ def build_ner_profile(
     'tag_size': 0,
     'start_tag': START_TAG,
     'stop_tag': STOP_TAG,
-
     'char_size': 0,
   }
   
@@ -352,18 +350,18 @@ def build_ner_profile(
   for name in ['train', 'valid', 'test']:
     word_counter, sent_len = build_vocabulary(path.join(data_dir, name, 'sentences.txt'))
     split[name + '_word_counter'] = word_counter
-    data_statistics[name + '_sentence_len'] = sent_len
+    data_statistics[name + '_sent_size'] = sent_len
 
 
   tag_counter = Counter()
   for name in ['train', 'valid', 'test']:
     tag_counter, tag_sent_len = build_vocabulary(path.join(data_dir, name, 'labels.txt'), tag_counter)
-    data_statistics[name + '_tag_sentence_len'] = tag_sent_len
+    data_statistics[name + '_label_size'] = tag_sent_len
 
 
   # should have the same number of lines
   for name in ['train', 'valid', 'test']:
-    assert data_statistics[name + '_sentence_len'] == data_statistics[name + '_tag_sentence_len']
+    assert data_statistics[name + '_sent_size'] == data_statistics[name + '_label_size']
 
 
   # step 2
@@ -386,7 +384,7 @@ def build_ner_profile(
     #   for w in set(split['valid_word_counter'].keys()).union(set(split['test_word_counter'].keys())):
     #     if w in glove_words.keys() or w.lower() in glove_words.keys():
     #       split['train_word_counter'].update([w])
-  
+
 
   # step 3
   # for option 1, if min_word_freq>1, this will remove many GloVe words that are not presented in the corpus
