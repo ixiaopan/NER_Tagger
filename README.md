@@ -54,10 +54,9 @@
 ### Baseline
 
 ```bash
-# which is equivalent to the following lines
-~ sh baseline.sh toy
 
-# build vocabulary, word_id, tag_id, pre_trained word embedding for each domain
+# which is equivalent to the following two lines
+~ sh baseline.sh toy
 
 ~ python train_baseline.py --train_data_dir='./data/toy'
 

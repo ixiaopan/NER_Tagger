@@ -79,23 +79,15 @@ def prepare_model_params(data_params_dir, model_param_dir):
   return params
 
 
-def init_baseline_model(models, train_data_dir, model_param_dir):
+def init_baseline_model(models, data_params_dir, model_param_dir):
   '''
   initialise the baseline model
-  @params:
-    models: baseline model in this case
-    train_data_dir:
-    model_param_dir: experiment params
-  '''
 
+  @params:
+    data_params_dir: directory containing the vocabulary used to config NER model
+        - individual domain: bc, mz
+        - pool domain: utilize all avaliable data from all domains
   '''
-  data_params_dir: dataset params used to config ner model
-      - individual domain: bc, mz
-      - pool domain: utilize all avaliable data from all domains
-  '''
-  data_params_dir = train_data_dir
-  if 'pool' in model_param_dir: # using pool
-    data_params_dir = './data/pool'
 
   params = prepare_model_params(data_params_dir, model_param_dir)
 
@@ -103,6 +95,7 @@ def init_baseline_model(models, train_data_dir, model_param_dir):
   pre_word_embedding=None
   if bool(params['use_pre_trained']):
     pre_word_embedding = np.load(os.path.join(data_params_dir, 'pre_word_embedding.npy'))
+
 
   model = models(
     vocab_size = params['vocab_size'], 
@@ -460,7 +453,7 @@ def build_ner_profile(
 
 
 
-def build_onto_dataloader(data_dir, type='train', batch_size = 1, shuffle = True, is_cuda=False):
+def build_onto_dataloader(data_dir, data_params_dir=None, type='train', batch_size = 1, shuffle = True, is_cuda=False):
   '''
   Refer: https://gist.github.com/HarshTrivedi/f4e7293e941b17d19058f6fb90ab0fec
 
@@ -468,16 +461,19 @@ def build_onto_dataloader(data_dir, type='train', batch_size = 1, shuffle = True
     - Customised dataloder designed for Ontonotes
   @params
     - data_dir: './data/bc'
+    - data_params_dir: directory containing the vocabulary used to config NER model
+        - individual domain: bc, mz
+        - pool domain: utilize all avaliable data from all domains
     - type: train, test, valid
   @return 
     - Generator: (batch_sent, batch_labels, batch_chars, word_len_per_sent)
   '''
 
-  data_stats = read_json(path.join(data_dir, 'dataset_params.json'))
-  word_id = read_json(path.join(data_dir, 'word_id.json'))
-  id_word = read_json(path.join(data_dir, 'id_word.json'))
-  tag_id = read_json(path.join(data_dir, 'tag_id.json'))
-  char_id = read_json(path.join(data_dir, 'char_id.json'))
+  data_stats = read_json(path.join(data_params_dir, 'dataset_params.json'))
+  word_id = read_json(path.join(data_params_dir, 'word_id.json'))
+  id_word = read_json(path.join(data_params_dir, 'id_word.json'))
+  tag_id = read_json(path.join(data_params_dir, 'tag_id.json'))
+  char_id = read_json(path.join(data_params_dir, 'char_id.json'))
 
   PAD_WORD = data_stats['pad_word']
   UNK_WORD = data_stats['unk_word']

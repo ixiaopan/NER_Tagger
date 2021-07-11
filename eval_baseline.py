@@ -78,18 +78,24 @@ metrics = {
 }
 
 
-def evaluate(data_dir, type, model, params, eval_dir):
+def evaluate(data_dir, type, model, params, eval_dir, data_params_dir=None):
   model.eval()
   
-  id_word = utils.read_json(os.path.join(data_dir, 'id_word.json'))
-  id_tag = utils.read_json(os.path.join(data_dir, 'id_tag.json'))
+  id_word = utils.read_json(os.path.join(data_params_dir, 'id_word.json'))
+  id_tag = utils.read_json(os.path.join(data_params_dir, 'id_tag.json'))
 
   total_pre_tag = []
   total_true_tag = []
   summary_word_tag_pred = []
 
   for inputs, labels, char_inputs, word_len_in_batch, perm_idx in \
-    utils.build_onto_dataloader(data_dir, type, batch_size=params['batch_size'], is_cuda=params['cuda']):
+    utils.build_onto_dataloader(
+      data_dir, 
+      data_params_dir=data_params_dir, 
+      type=type, 
+      batch_size=params['batch_size'], 
+      is_cuda=params['cuda']
+    ):
 
     # step 1 prediction
     _, pre_labels = model( inputs, char_inputs, word_len_in_batch, perm_idx )
@@ -121,20 +127,30 @@ if __name__ == '__main__':
   args = parser.parse_args()
   data_dir, model_param_dir = args.data_dir, args.model_param_dir
   
+  # baseline pool, pool_init
+  transfer_method = model_param_dir.split('/')[-1] 
+  if transfer_method in ['pool', 'poo_init']: # using pool
+    data_params_dir = './data/pool'
+  elif transfer_method == 'baseline':
+    data_params_dir = data_dir
+
+
+
   # define model
-  model, params = utils.init_baseline_model(BiLSTM_CRF, data_dir, model_param_dir)
+  model, params = utils.init_baseline_model(BiLSTM_CRF, data_params_dir, model_param_dir)
   print('=== parameters ===')
   print(params)
-
   print('=== model ===')
   print(model)
 
-  transfer_method = model_param_dir.split('/')[-1] # pool, pool_init
-  # load model
-  if 'baseline' in model_param_dir:
+
+  # load best model
+  if transfer_method == 'baseline':
     model = utils.load_model(os.path.join(model_param_dir, data_dir.split('/')[-1], 'best.pth.tar'), model)
-  else: # baseline
+  else:
     model = utils.load_model(os.path.join(model_param_dir, transfer_method, 'best.pth.tar'), model)
+
+
 
   # save logs
   print('=== Score ===')
@@ -143,7 +159,9 @@ if __name__ == '__main__':
     args.dataset_type, 
     model, 
     params, 
-    eval_dir=os.path.join(model_param_dir, data_dir.split('/')[-1])
+    eval_dir=os.path.join(model_param_dir, data_dir.split('/')[-1]),
+    data_params_dir=data_params_dir
+
   )
   print(summary_batch_str)
   

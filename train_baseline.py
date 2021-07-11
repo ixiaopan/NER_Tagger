@@ -28,8 +28,15 @@ def train_and_evaluate(
   best_metric='micro_f1',
   model_weight_filepath=None
 ):
+  # baseline pool, pool_init
+  transfer_method = model_param_dir.split('/')[-1] 
+  if transfer_method in ['pool', 'poo_init']: # using pool
+    data_params_dir = './data/pool'
+  elif transfer_method == 'baseline':
+    data_params_dir = train_data_dir
+
   # prepare model
-  model, params = utils.init_baseline_model(BiLSTM_CRF, train_data_dir, model_param_dir)
+  model, params = utils.init_baseline_model(BiLSTM_CRF, data_params_dir, model_param_dir)
   print('=== parameters ===')
   print(params)
   print('=== model ===')
@@ -58,7 +65,11 @@ def train_and_evaluate(
 
   for epoch in range(params['epoches']):
     train_loss_per_epoch = []
-    train_loader = utils.build_onto_dataloader(train_data_dir, 'train', batch_size=params['batch_size'], is_cuda=params['cuda'])
+    train_loader = utils.build_onto_dataloader(
+      train_data_dir, 
+      data_params_dir=data_params_dir,
+      type='train', batch_size=params['batch_size'], is_cuda=params['cuda']
+    )
 
     for inputs, labels, char_inputs, word_len_in_batch, perm_idx in train_loader:
       '''
@@ -94,7 +105,7 @@ def train_and_evaluate(
       print('epoch %d/%d: ' % (epoch + 1, params['epoches']))
 
       # validation
-      val_metrics, val_metrics_str, summary_word_tag_pred = evaluate(train_data_dir, 'valid', model, params, eval_dir=exper_type_dir)
+      val_metrics, val_metrics_str, summary_word_tag_pred = evaluate(train_data_dir, 'valid', model, params, eval_dir=exper_type_dir, data_params_dir=data_params_dir)
 
       if val_metrics[best_metric] >= best_metric_score:
         best_metric_score = val_metrics[best_metric]

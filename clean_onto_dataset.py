@@ -1,5 +1,6 @@
 import re
 import numpy as np
+
 from utils import utils
 
 def clean_ontonotes_data(min_seq_len=2, min_word_len=1):
@@ -105,8 +106,6 @@ def clean_ontonotes_data(min_seq_len=2, min_word_len=1):
         entity_type.update([ t['type'] for t in s['ne'].values() ])
   meta_data['named_entities'] = list(entity_type)
   
-  # used for pooldomain
-  # total_corpus = []
 
   # construct data files
   genres = np.unique(genre_each_file)
@@ -193,21 +192,12 @@ def clean_ontonotes_data(min_seq_len=2, min_word_len=1):
     meta_data['genres'][g]['total_token_by_genre'] = total_tokens_count_by_entity_in_genre
     meta_data['genres'][g]['total_token_ratio_by_genre'] = total_tokens_ratio_by_entity_in_genre
 
-    # total_corpus += genre_corpus[1:]
 
     utils.save_text('./data/{}/dataset.csv'.format(g), genre_corpus, lambda s: ','.join(s))
     print(' - {} done'.format(g))
-
   
   utils.save_json('./data/data_summary.json', meta_data)  
 
-  # shuffle total_corpus
-  # np.random.seed(10)
-  # rand_idx = np.random.permutation(len(total_corpus))
-  # total_corpus = [['Sentence #', 'Word', 'POS', 'Tag']] + [ total_corpus[i] for i in rand_idx ]
-  # utils.save_text('./data/pool/dataset.csv', total_corpus, lambda s: ','.join(s))
-
-  # print(' - pool done')
 
 
 if __name__ == '__main__':
