@@ -57,7 +57,7 @@ def train_and_evaluate(
   training_log = [ 
     'Start training: ' + train_data_dir, 
     time.asctime( time.localtime(time.time()) ), 
-    json.dumps(params)
+    json.dumps({x: params[x] for x in params if x not in ['device']})
   ] # record epoch logs
 
   best_metric_score = 0
