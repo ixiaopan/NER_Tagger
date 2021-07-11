@@ -129,7 +129,7 @@ if __name__ == '__main__':
   
   # baseline pool, pool_init
   transfer_method = model_param_dir.split('/')[-1] 
-  if transfer_method in ['pool', 'poo_init']: # using pool
+  if transfer_method in ['pool', 'pool_init']: # using pool
     data_params_dir = './data/pool'
   elif transfer_method == 'baseline':
     data_params_dir = data_dir

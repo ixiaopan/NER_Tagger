@@ -20,17 +20,20 @@ parser.add_argument('--train_data_dir', default='./data/toy', help="Directory co
 parser.add_argument('--best_metric', default='micro_f1', help="metric used to obtain the best model")
 parser.add_argument('--model_param_dir', default='./experiments/baseline', help="Directory containing model parameters")
 parser.add_argument('--model_weight_filepath', default=None, help="Pretrained model weights")
+parser.add_argument('--early_stop_num_epoch', default=5, help="Early Stop")
+
 
 @teams_sender(webhook_url=config_parser['WEBHOOK']['teams'])
 def train_and_evaluate(
   train_data_dir, 
   model_param_dir='./experiments/baseline', 
   best_metric='micro_f1',
-  model_weight_filepath=None
+  model_weight_filepath=None,
+  early_stop_num_epoch=5
 ):
   # baseline pool, pool_init
   transfer_method = model_param_dir.split('/')[-1] 
-  if transfer_method in ['pool', 'poo_init']: # using pool
+  if transfer_method in ['pool', 'pool_init']: # using pool
     data_params_dir = './data/pool'
   elif transfer_method == 'baseline':
     data_params_dir = train_data_dir
@@ -61,15 +64,19 @@ def train_and_evaluate(
   ] # record epoch logs
 
   best_metric_score = 0
+  nepoch_no_improve = 0 # early-stop
   exper_type_dir = os.path.join(model_param_dir, train_data_dir.split('/')[-1])
 
   for epoch in range(params['epoches']):
-    train_loss_per_epoch = []
     train_loader = utils.build_onto_dataloader(
       train_data_dir, 
       data_params_dir=data_params_dir,
-      type='train', batch_size=params['batch_size'], is_cuda=params['cuda']
+      type='train', 
+      batch_size=params['batch_size'], 
+      is_cuda=params['cuda']
     )
+
+    train_loss_per_epoch = []
 
     for inputs, labels, char_inputs, word_len_in_batch, perm_idx in train_loader:
       '''
@@ -110,12 +117,23 @@ def train_and_evaluate(
       if val_metrics[best_metric] >= best_metric_score:
         best_metric_score = val_metrics[best_metric]
         is_best = True
+        nepoch_no_improve = 0
+      else:
+        nepoch_no_improve += 1
+
+
+      if nepoch_no_improve >= early_stop_num_epoch:
+        print("- early stopping {} epochs".format(nepoch_no_improve))
+        training_log.append("- early stopping {} epochs".format(nepoch_no_improve))
+        break
+
 
       utils.save_model(exper_type_dir, {
         'epoch': epoch + 1,
         'model_dict': model.state_dict(),
         'optim_dict': optimiser.state_dict()
       }, is_best)
+
 
       if is_best:
         print('best', best_metric, best_metric_score)
@@ -127,7 +145,6 @@ def train_and_evaluate(
       epoch_log = 'train loss: %.4f, %s' % (np.mean(train_loss_per_epoch), val_metrics_str)
       training_log.append(epoch_log)
       print(epoch_log)
-
 
       # revert 
       model.train()
@@ -145,5 +162,6 @@ if __name__ == '__main__':
     args.train_data_dir, 
     args.model_param_dir, 
     args.best_metric,
-    args.model_weight_filepath
+    args.model_weight_filepath,
+    args.early_stop_num_epoch
   )

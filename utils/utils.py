@@ -12,7 +12,7 @@ from collections import Counter
 
 import torch
 from torch.utils.data import TensorDataset, DataLoader
-from torch.autograd import Variable
+
 
 # from nltk.tokenize import word_tokenize
 # from nltk.corpus import stopwords
@@ -68,9 +68,6 @@ def prepare_model_params(data_params_dir, model_param_dir):
   params = read_json(os.path.join(model_param_dir, 'params.json'))
   params['cuda'] = is_cuda
   params['device'] = device
-
-  # for reproducibility
-  torch.manual_seed(45)
 
   # merge dataset params
   data_params = read_json(os.path.join(data_params_dir, 'dataset_params.json'))
@@ -163,10 +160,10 @@ def split_train_val_test(corpus, corpus_tag, shuffle=True):
   valid_cutoff = int(0.8 * total_len)
 
   if shuffle:
-    np.random.seed(10)
-    rand_idx = np.random.permutation(total_len)
+    torch.manual_seed(45)
+    rand_idx = torch.randperm(total_len)
   else:
-    rand_idx = np.arange(total_len)
+    rand_idx = range(total_len)
 
   train_idx = rand_idx[:train_cutoff]
   valid_idx = rand_idx[train_cutoff:valid_cutoff]
@@ -383,14 +380,14 @@ def build_ner_profile(
         glove_words[value[0]] = value[1:]
 
     
-    if augment_vocab_from_glove: # option 1
-      split['train_word_counter'].update(list(glove_words.keys()))
-    else: # option 2,
-      for w in set(split['valid_word_counter'].keys()).union(set(split['test_word_counter'].keys())):
-        if w in glove_words.keys() or w.lower() in glove_words.keys():
-          split['train_word_counter'].update([w])
+    # if augment_vocab_from_glove: # option 1
+    #   split['train_word_counter'].update(list(glove_words.keys()))
+    # else: # option 2,
+    #   for w in set(split['valid_word_counter'].keys()).union(set(split['test_word_counter'].keys())):
+    #     if w in glove_words.keys() or w.lower() in glove_words.keys():
+    #       split['train_word_counter'].update([w])
   
-    
+
   # step 3
   # for option 1, if min_word_freq>1, this will remove many GloVe words that are not presented in the corpus
   # for now, we only consider option 2
