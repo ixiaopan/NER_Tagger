@@ -49,5 +49,4 @@ if __name__ == '__main__':
   for name in ['train', 'valid', 'test']:
     utils.save_text(os.path.join('./data/pool', name, 'sentences.txt'), pool_data[name + '_sentences'], lambda s: ' '.join(s))
     utils.save_text(os.path.join('./data/pool', name, 'labels.txt'), pool_data[name + '_labels'], lambda s: ' '.join(s))
-
-  print('=== pool done ===')
+  print(' - pool done')

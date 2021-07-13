@@ -14,7 +14,7 @@ from models.BiLSTM import BiLSTM_CRF
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir', default='./data/toy', help="dataset to be tested")
-parser.add_argument('--dataset_type', default='test', help="dataset typep")
+parser.add_argument('--dataset_type', default='test', help="dataset type")
 parser.add_argument('--model_param_dir', default='./experiments/baseline', help="Directory containing model parameters")
 
 NER_TAG_ID = 2

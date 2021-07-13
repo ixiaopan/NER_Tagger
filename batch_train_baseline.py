@@ -6,7 +6,7 @@ import numpy as np
 import torch.optim as optim
 
 from utils import utils
-from models.BiLSTM import BiLSTM_CRF
+from models.BiLSTM_batch import BiLSTM_CRF_Batch
 from eval_baseline import evaluate
 
 from knockknock import teams_sender
@@ -35,8 +35,9 @@ def train_and_evaluate(
   elif transfer_method == 'baseline':
     data_params_dir = train_data_dir
 
+
   # prepare model
-  model, params = utils.init_baseline_model(BiLSTM_CRF, data_params_dir, model_param_dir)
+  model, params = utils.init_baseline_model(BiLSTM_CRF_Batch, data_params_dir, model_param_dir)
   print('=== parameters ===')
   print(params)
   print('=== model ===')
@@ -63,25 +64,28 @@ def train_and_evaluate(
     train_loader = utils.build_onto_dataloader(
       train_data_dir, 
       data_params_dir=data_params_dir,
-      type='train', 
+      type='train',
       batch_size=params['batch_size'], 
-      is_cuda=params['cuda']
+      is_cuda=params['cuda'],
+      enable_batch=True
     )
 
     train_loss_per_epoch = []
 
     for inputs, labels, char_inputs, word_len_in_batch, perm_idx in train_loader:
       '''
-      only one sentence
-      inputs: (seq_len)
-      labels: (seq_len)
-      char_inputs: (seq_len, max_word_len)
-      word_len_in_batch: word_len in batch
+      inputs: (batch_size, max_seq_len)
+      labels: (batch_size, max_seq_len)
+      char_inputs: (batch_size*max_seq_len, max_word_len)
+      word_len_in_batch: (batch_size*max_seq_len, )
+      perm_idx: (batch_size*max_seq_len, )
       '''
 
       logger.log('inputs shape:', inputs.shape)
       logger.log('labels shape:', labels.shape)
       logger.log('char_inputs shape:', char_inputs.shape)
+      logger.log('word_len_in_batch shape:', word_len_in_batch.shape)
+      logger.log('perm_idx shape:', perm_idx.shape)
 
 
       loss = model.neg_log_likelihood(
@@ -123,8 +127,7 @@ def train_and_evaluate(
 
       utils.save_model(exper_type_dir, {
         'epoch': epoch + 1,
-        'model_dict': model.state_dict(),
-        'optim_dict': optimiser.state_dict()
+        'model_dict': model
       }, is_best)
 
 

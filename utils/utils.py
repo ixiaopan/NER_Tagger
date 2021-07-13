@@ -303,7 +303,6 @@ def build_ner_profile(
   use_char_embed=False,
   use_pre_trained=False,
   glove_word_dim=50,  # 50, 100, 200, 300
-  augment_vocab_from_glove=False, 
   min_tag_freq=1,
 ):
   '''
@@ -324,7 +323,6 @@ def build_ner_profile(
     'use_char_embed': use_char_embed,
     'use_pre_trained': use_pre_trained,
     'glove_word_dim': glove_word_dim,
-    'augment_vocab_from_glove': augment_vocab_from_glove,
     
     'train_sent_size': 0,
     'valid_sent_size': 0,
@@ -377,14 +375,6 @@ def build_ner_profile(
         value = line.split()
         glove_words[value[0]] = value[1:]
 
-    
-    # if augment_vocab_from_glove: # option 1
-    #   split['train_word_counter'].update(list(glove_words.keys()))
-    # else: # option 2,
-    #   for w in set(split['valid_word_counter'].keys()).union(set(split['test_word_counter'].keys())):
-    #     if w in glove_words.keys() or w.lower() in glove_words.keys():
-    #       split['train_word_counter'].update([w])
-
 
   # step 3
   # for option 1, if min_word_freq>1, this will remove many GloVe words that are not presented in the corpus
@@ -395,6 +385,9 @@ def build_ner_profile(
   if UNK_WORD not in vocab:
     vocab.insert(0, UNK_WORD)
 
+  # for batch version
+  tags_batch = [ t for t, c in tag_counter.items() if c >= min_tag_freq ]
+  # for one sentence version
   tags = [ t for t, c in tag_counter.items() if c >= min_tag_freq ]
   tags.insert(0, START_TAG)
   tags.insert(0, STOP_TAG)
@@ -405,11 +398,20 @@ def build_ner_profile(
 
   data_statistics['vocab_size'] = len(vocab)
   data_statistics['tag_size'] = len(tags)
+  # for batch version
+  data_statistics['tag_size_batch'] = len(tags_batch)
   data_statistics['char_size'] = len(chars)
 
   word_id, inverse_word_id = map_word_id(vocab)
   tag_id, inverse_tag_id = map_word_id(tags)
   chars_id, inverse_chars_id = map_word_id(chars)
+  # for batch version: 'O' is at the first position
+  tag_id_batch = {'O': 0}
+  for t in tags_batch:
+    if t == 'O':
+      continue
+    tag_id_batch[t] = len(tag_id_batch)
+  inverse_tag_id_batch = { t_id: t for (t, t_id) in tag_id_batch.items() }
 
 
   # save pre-trained word vector
@@ -426,12 +428,16 @@ def build_ner_profile(
   # step 4 save meta data to file
   save_text(path.join(data_dir, 'vocabulary.txt'), vocab)
   save_text(path.join(data_dir, 'tags.txt'), tags)
+  save_text(path.join(data_dir, 'tags_batch.txt'), tags_batch)
   
   save_json(path.join(data_dir, 'word_id.json'), word_id)
   save_json(path.join(data_dir, 'id_word.json'), inverse_word_id)
   
   save_json(path.join(data_dir, 'tag_id.json'), tag_id)
   save_json(path.join(data_dir, 'id_tag.json'), inverse_tag_id)
+
+  save_json(path.join(data_dir, 'tag_id_batch.json'), tag_id_batch)
+  save_json(path.join(data_dir, 'id_tag_batch.json'), inverse_tag_id_batch)
 
   save_json(path.join(data_dir, 'char_id.json'), chars_id)
   save_json(path.join(data_dir, 'id_char.json'), inverse_chars_id)
@@ -448,7 +454,7 @@ def build_ner_profile(
 
 
 
-def build_onto_dataloader(data_dir, data_params_dir=None, type='train', batch_size = 1, shuffle = True, is_cuda=False):
+def build_onto_dataloader(data_dir, data_params_dir=None, type='train', batch_size = 1, shuffle = True, is_cuda=False, enable_batch=False):
   '''
   Refer: https://gist.github.com/HarshTrivedi/f4e7293e941b17d19058f6fb90ab0fec
 
@@ -467,8 +473,12 @@ def build_onto_dataloader(data_dir, data_params_dir=None, type='train', batch_si
   data_stats = read_json(path.join(data_params_dir, 'dataset_params.json'))
   word_id = read_json(path.join(data_params_dir, 'word_id.json'))
   id_word = read_json(path.join(data_params_dir, 'id_word.json'))
-  tag_id = read_json(path.join(data_params_dir, 'tag_id.json'))
   char_id = read_json(path.join(data_params_dir, 'char_id.json'))
+
+  tag_id = read_json(path.join(data_params_dir, 'tag_id.json'))
+  if enable_batch:
+    tag_id = read_json(path.join(data_params_dir, 'tag_id_batch.json'))
+
 
   PAD_WORD = data_stats['pad_word']
   UNK_WORD = data_stats['unk_word']
@@ -520,13 +530,14 @@ def build_onto_dataloader(data_dir, data_params_dir=None, type='train', batch_si
     batch_sentences = [ sentences[idx] for idx in batch_idx ]
     batch_tags = [ tags[idx] for idx in batch_idx ]
 
+
     # Step 3.1 padding sentence
     # refer: https://github.com/cs230-stanford/cs230-code-examples/blob/master/pytorch/nlp/model/data_loader.py
     batch_max_len = max([len(s) for s in batch_sentences])
 
+    # (batch_size, max_seq_len)
     batch_data = word_id[PAD_WORD] * np.ones(( len(batch_sentences), batch_max_len ), dtype=int)
-    # -1 corresponds to the word with padding, the loss of them will be ignored 
-    batch_labels = -1 * np.ones((len(batch_sentences), batch_max_len), dtype=int)
+    batch_labels = 0 * np.ones((len(batch_sentences), batch_max_len), dtype=int)
     # (batch_size, max_seq_len)
     # [
     #   [9, 29, 10, PAD_, PAD_, PAD_],
@@ -545,6 +556,7 @@ def build_onto_dataloader(data_dir, data_params_dir=None, type='train', batch_si
     #   [6, 9, 8, 4, 1, 11, 12, 10], # 8
     #   [12, 5, 8, 14], # 4
     #   [7, 3, 2, 5, 13, 7] # 6
+    #   ...
     # ]
     batch_chars = []
     for sent in batch_data:
@@ -559,6 +571,7 @@ def build_onto_dataloader(data_dir, data_params_dir=None, type='train', batch_si
 
 
     # Step 3.2.1, calculate the max length of a word, [8, 4, 6]
+    # (batch_size*max_seq_len,)
     word_len_in_batch = torch.LongTensor( [ len(s) for s in batch_chars ])
     max_word_len_in_batch = word_len_in_batch.max() # 8
 
@@ -572,23 +585,26 @@ def build_onto_dataloader(data_dir, data_params_dir=None, type='train', batch_si
     for idx, (seq, seqlen) in enumerate( zip(batch_chars, word_len_in_batch) ):
       fixed_char_in_batch[idx, :seqlen] = torch.LongTensor(seq)
 
+
     # Step 3.2.3, sort instances in descending order
     # [
     #   [ 6  9  8  4  1 11 12 10 ]
     #   [ 7  3  2  5 13  7  0  0 ]
     #   [ 12  5  8 14  0  0  0  0 ]
     # ]
+    # both are the shape of (batch_size*max_seq_len, )
     word_len_in_batch, perm_idx = torch.sort(word_len_in_batch, dim=0, descending=True)
     fixed_char_in_batch = fixed_char_in_batch[perm_idx]
 
 
+
     # Step 4
-    fixed_char_in_batch = fixed_char_in_batch
-    # force batch_size=1
-    batch_data = torch.LongTensor(batch_data.flatten())
-    batch_labels = torch.LongTensor(batch_labels.flatten())
-    # batch_data = torch.LongTensor(batch_data)
-    # batch_labels = torch.LongTensor(batch_labels)
+    if enable_batch:
+      batch_data = torch.LongTensor(batch_data)
+      batch_labels = torch.LongTensor(batch_labels)
+    else: # force batch_size=1
+      batch_data = torch.LongTensor(batch_data.flatten())
+      batch_labels = torch.LongTensor(batch_labels.flatten())
 
     if is_cuda:
       fixed_char_in_batch, batch_data, batch_labels = fixed_char_in_batch.cuda(), batch_data.cuda(), batch_labels.cuda()

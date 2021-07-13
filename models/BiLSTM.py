@@ -1,6 +1,9 @@
 '''
-The baseline ner model
-@source: https://github.com/ZubinGou/NER-BiLSTM-CRF-PyTorch/blob/0146defefcc088b045016bafe5ea326fc52c7027/src/model.py
+The baseline BiLSTM_CRF model 
+  - without mini-batch, one sent each time
+
+@reference: 
+  - https://github.com/ZubinGou/NER-BiLSTM-CRF-PyTorch/blob/0146defefcc088b045016bafe5ea326fc52c7027/src/model.py
 '''
 
 import torch
@@ -251,7 +254,7 @@ class BiLSTM_CRF(nn.Module):
     # add 'start'
     pad_start_tags = torch.cat([ torch.tensor([self.tag2id[START_TAG]], dtype=torch.long).to(self.device), tags ])
     # add 'end'
-    pad_stop_tags = torch.cat([ tags, torch.tensor([self.tag2id[START_TAG]], dtype=torch.long).to(self.device) ])
+    pad_stop_tags = torch.cat([ tags, torch.tensor([self.tag2id[STOP_TAG]], dtype=torch.long).to(self.device) ])
     
     return torch.sum(self.transitionMatrix[pad_start_tags, pad_stop_tags]) + torch.sum(feats[range(len(tags)), tags])
 

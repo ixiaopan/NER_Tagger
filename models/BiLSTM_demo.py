@@ -1,5 +1,5 @@
 """
-Refererence 
+@reference: 
   - https://pytorch.org/tutorials/beginner/nlp/advanced_tutorial.html
 """
 
@@ -34,13 +34,9 @@ hidden_dim = 4
 
 
 class BiLSTM_CRF(nn.Module):
-  def __init__(
-    self, 
-    vocab_size, tag2id, embedding_dim, hidden_dim=256, dropout=.5, 
-    
-  ):
+  def __init__(self, vocab_size, tag2id, embedding_dim, hidden_dim=256, dropout=.5):
     super(BiLSTM_CRF, self).__init__()
-    
+
     self.vocab_size = vocab_size
     self.embedding_dim = embedding_dim
     self.hidden_dim = hidden_dim
