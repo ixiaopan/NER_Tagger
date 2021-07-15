@@ -30,8 +30,8 @@ class CRF(nn.Module):
     @return
       (n,)
     '''
-    max_val, _ = vec.max(dim) # a namedtuple (values, indices)
-    # unsqueeze: the index at which to insert the singleton dimension
+    max_val, _ = vec.max(dim)
+
     return max_val + (vec - max_val.unsqueeze(dim)).exp().sum(dim).log()
 
 
@@ -166,7 +166,6 @@ class CRF(nn.Module):
 
       for i in range(1, max_seq_len):
         # (batch_size, num_of_tag)
-        # 
         a = self._log_sum_exp(transitions + a.unsqueeze(-1) + feats[:, i].unsqueeze(1), 1)
 
       # (batch_size, num_of_tag) + (1, num_of_tag)
@@ -175,39 +174,60 @@ class CRF(nn.Module):
   
   def forward(self, feats):
       """
-       feats: 
+      feats: 
         - (batch_size, max_seq_len, num_of_tag)
       """
-      _, seq_size, num_tags = feats.shape
+      _, max_seq_len, num_tags = feats.shape
 
-      if self.num_of_tag != num_tags:
-          raise ValueError('num_tags should be {} but got {}'.format(self.num_tags, num_tags))
+      '''
+      the first word of all sentencess
+      '''
+      # (batch_size, num_of_tag)
+      pre_score = feats[:, 0] + self.start_transitions.unsqueeze(0)
+     
+      # ([1, num_of_tag, num_of_tag])
+      transitions = self.transitionMatrix.unsqueeze(0)
+     
+      backpointers = []
+      for i in range(1, max_seq_len): # loop each word
+          # broadcast 
+          # (batch_size, num_of_tag, 1)   (1, num_of_tag, num_of_tag)             
+          # pre_score_0                     transitionMatrix
 
-      v = feats[:, 0] + self.start_transitions.unsqueeze(0) # [batch_size, num_tags]
-      transitions = self.transitionMatrix.unsqueeze(0) # [1, num_tags, num_tags] from -> to
-      paths = []
-
-      for i in range(1, seq_size):
-          feat = feats[:, i] # [batch_size, num_tags]
-          v, idx = (v.unsqueeze(-1) + transitions).max(1) # [batch_size, num_tags], [batch_size, num_tags]
+          # pre_score_1              + 
           
-          paths.append(idx)
-          v = (v + feat) # [batch_size, num_tags]
+          # pre_score_2
+          #   ...
+          # pre_score_|num_of_tag|
+          
+          # (batch_size, num_of_tag)
+          pre_score, pre_score_max_idx = (pre_score.unsqueeze(-1) + transitions).max(1)
 
-      
-      v, tag = (v + self.stop_transitions.unsqueeze(0)).max(1, True)
+          # [ (batch_size, num_of_tag), (batch_size, num_of_tag), ..., (batch_size, num_of_tag)]
+          backpointers.append(pre_score_max_idx)
 
-      # Backtrack
-      tags = [tag]
-      for idx in reversed(paths):
-          tag = idx.gather(1, tag)
-          tags.append(tag)
+          pre_score = (pre_score + feats[:, i]) 
 
-      tags.reverse()
-      return torch.cat(tags, 1)
-  
-  
-  
+      # (batch_size, num_of_tag), (batch_size, 1)
+      pre_score, last_best_id = (pre_score + self.stop_transitions.unsqueeze(0)).max(dim=1, keepdim=True)
+
+
+      # [ (batch_size, 1) ]
+      best_path = [last_best_id]
+      for path_pointer in reversed(backpointers): # from the last word
+          # [                                        [
+          #   [1, 2, ... |num_of_tag| ]                [2]     
+          #   [1, 2, ... |num_of_tag| ]   gather       [0]
+          #   [1, 2, ... |num_of_tag| ]                [..]
+          # ]                                        ]
+          # the value in path_pointer indicates the best previous tag_id
+          last_best_id = path_pointer.gather(dim=1, last_best_id)
+          best_path.append(last_best_id)
+
+      best_path.reverse()
+
+      # (batch_size, num_of_tag)
+      return torch.cat(best_path, 1)
 
 
 
@@ -243,7 +263,7 @@ class BiLSTM_CRF_Batch(nn.Module):
       self.char_hidden_dim = char_hidden_dim
       self.char_embed = nn.Embedding(len(char2id), char_embedding_dim)
       self.char_lstm = nn.LSTM(char_embedding_dim, char_hidden_dim // 2, num_layers = 1, bidirectional=True, batch_first=True)
-      init_lstm(self.char_lstm)
+      self.init_lstm(self.char_lstm)
 
     # word-level
     self.word_embed = nn.Embedding(vocab_size, embedding_dim)
@@ -286,14 +306,13 @@ class BiLSTM_CRF_Batch(nn.Module):
 
   def forward(self, inputs, input_chars=None, word_len_per_sent=None, perm_idx=None):
     '''
-      inputs:
+      inputs(after padding):
         - (batch_size, max_seq_len) 
-        - after padding
         - each element indicates the corresponding word_id
+      
       # if you use char embedding,
-      input_chars:
+      input_chars(after padding):
         - (seq_len, max_word_len)
-        - after padding
         -  each element indicates the corresponding char_id
       # [
       #   there are 3 words in this sentence
@@ -302,6 +321,7 @@ class BiLSTM_CRF_Batch(nn.Module):
       #   [ 7  3  2  5  13  7  0  0 ] # 6
       #   [ 12  5  8 14  0  0  0  0 ] # 4
       # ]
+     
       @return
         emmision score: (batch_size, max_seq_len, num_of_tag)
     '''
@@ -364,13 +384,16 @@ class BiLSTM_CRF_Batch(nn.Module):
     return lstm_feats
 
 
-  def crf_decode(self, inputs, seq_len_in_batch):
+  def crf_decode(self, inputs, seq_len_in_batch=None):
     '''
     inputs: (batch_size, max_seq_len, num_of_tag)
     lengths: (batch_size, )
     '''
     prediction = self.crf(inputs)
-    prediction = [ prediction[i, :length].data.cpu().numpy() for i, length in enumerate(seq_len_in_batch) ]
+    
+    if seq_len_in_batch is not None:
+      prediction = [ prediction[i, :length].data.cpu().numpy() 
+        for i, length in enumerate(seq_len_in_batch) ]
 
     return prediction
 
@@ -384,10 +407,6 @@ class BiLSTM_CRF_Batch(nn.Module):
         - (batch_size, max_seq_len)
     """
     return self.crf.loss(inputs, true_pad_labels)
-
-
-
-
 
 
 
@@ -454,6 +473,8 @@ def main():
     preds = model(pad_batch_X)
     preds = model.crf_decode(preds, seq_len_in_batch)
     print(preds)
+
+
 
 if __name__ == '__main__':
   main()

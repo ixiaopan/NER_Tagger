@@ -3,23 +3,23 @@ The baseline BiLSTM_CRF model
   - without mini-batch, one sent each time
 
 @reference: 
+  - https://pytorch.org/tutorials/beginner/nlp/advanced_tutorial.html
   - https://github.com/ZubinGou/NER-BiLSTM-CRF-PyTorch/blob/0146defefcc088b045016bafe5ea326fc52c7027/src/model.py
 '''
 
 import torch
-import torch.nn as nn
-from torch.nn import init
 import numpy as np
+import torch.nn as nn
+import torch.optim as optim
+from torch.nn import init
 from utils import utils
 
 torch.manual_seed(45)
 
 
-
 def argmax(vec):
   _, idx = torch.max(vec, 1)
   return idx.item()
-
 
 
 def log_sum_exp(vec):
@@ -54,7 +54,7 @@ class BiLSTM_CRF(nn.Module):
     self, 
     vocab_size, 
     tag2id, 
-    embedding_dim, 
+    embedding_dim=24, 
     hidden_dim=256, 
     dropout=.5, 
     use_char_embed=False, 
@@ -112,7 +112,6 @@ class BiLSTM_CRF(nn.Module):
     self.transitionMatrix.data[:, tag2id[START_TAG]] = -10000
     # never transfer from the stop tag
     self.transitionMatrix.data[tag2id[STOP_TAG], :] = -10000
-
 
 
   def _forward_alg(self, feats):
@@ -280,7 +279,6 @@ class BiLSTM_CRF(nn.Module):
     return forward_score - gold_score
   
   
-
   # inference
   def _viterbi_decode(self, feats):
     backpointers = []
@@ -360,3 +358,62 @@ class BiLSTM_CRF(nn.Module):
     score, tag_seq = self._viterbi_decode(feats)
 
     return score, tag_seq
+
+
+
+def run_demo():
+
+  def prepare_sequence(seq, word_id):
+    idxs = [word_id[w] for w in seq]
+    return torch.tensor(idxs, dtype=torch.long)
+
+
+  training_data = [
+    (
+      "the wall street journal reported today that apple corporation made money".split(),
+      "B I I I O O O B I O O".split()
+    ), 
+    (
+      "georgia tech is a university in georgia".split(),
+      "B I O O O O B".split()
+    )
+  ]
+
+  word_to_ix = {}
+  for sentence, tags in training_data:
+      for word in sentence:
+          if word not in word_to_ix:
+              word_to_ix[word] = len(word_to_ix)
+
+  tag_to_ix = {"B": 0, "I": 1, "O": 2, START_TAG: 3, STOP_TAG: 4}
+  id2tag = { i: t for (t, i) in tag_to_ix.items() }
+
+  model = BiLSTM_CRF(len(word_to_ix), tag_to_ix, embedding_dim=5, hidden_dim=4)
+  optimizer = optim.SGD(model.parameters(), lr=0.01, weight_decay=1e-4)
+  print(model)
+
+  for epoch in range(450):
+    for sentence, tags in training_data:
+      sent_id = prepare_sequence(sentence, word_to_ix)
+      targets = torch.tensor([ tag_to_ix[t] for t in tags ], dtype=torch.long)
+      
+      loss = model.neg_log_likelihood(sent_id, targets)
+      
+      optimizer.zero_grad()
+      loss.backward()
+      optimizer.step()
+
+
+  with torch.no_grad():
+    X_sent, y_labels = training_data[0]
+    precheck_sent = prepare_sequence(X_sent, word_to_ix)
+
+    _, y_pred = model(precheck_sent)
+    y_pred = [id2tag[t] for t in y_pred]
+
+    print('true labels: ', y_labels)
+    print('pred labels: ', y_pred)
+
+
+if __name__ == '__main__':
+  run_demo()

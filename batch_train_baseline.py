@@ -7,7 +7,7 @@ import torch.optim as optim
 
 from utils import utils
 from models.BiLSTM_batch import BiLSTM_CRF_Batch
-from eval_baseline import evaluate
+from batch_eval_baseline import evaluate_batch
 
 from knockknock import teams_sender
 from configparser import ConfigParser
@@ -20,6 +20,7 @@ parser.add_argument('--train_data_dir', default='./data/toy', help="Directory co
 parser.add_argument('--best_metric', default='micro_f1', help="Metric used to obtain the best model")
 parser.add_argument('--model_param_dir', default='./experiments/baseline', help="Directory containing model parameters")
 parser.add_argument('--early_stop_num_epoch', default=5, help="Early Stop")
+
 
 @teams_sender(webhook_url=config_parser['WEBHOOK']['teams'])
 def train_and_evaluate(
@@ -45,8 +46,6 @@ def train_and_evaluate(
 
   optimiser = optim.Adam(model.parameters(), lr=params['learning_rate'], weight_decay=params['weight_decay'])
 
-  logger = utils.Logger(params['debug'])
-
   # train model
   print('=== training ===')
   start_time = time.time()
@@ -58,7 +57,7 @@ def train_and_evaluate(
 
   best_metric_score = 0
   nepoch_no_improve = 0 # early-stop
-  exper_type_dir = os.path.join(model_param_dir, train_data_dir.split('/')[-1])
+  exper_domain_dir = os.path.join(model_param_dir, train_data_dir.split('/')[-1])
 
   for epoch in range(params['epoches']):
     train_loader = utils.build_onto_dataloader(
@@ -81,20 +80,8 @@ def train_and_evaluate(
       perm_idx: (batch_size*max_seq_len, )
       '''
 
-      logger.log('inputs shape:', inputs.shape)
-      logger.log('labels shape:', labels.shape)
-      logger.log('char_inputs shape:', char_inputs.shape)
-      logger.log('word_len_in_batch shape:', word_len_in_batch.shape)
-      logger.log('perm_idx shape:', perm_idx.shape)
-
-
-      loss = model.neg_log_likelihood(
-        inputs, 
-        labels, 
-        char_inputs, 
-        word_len_in_batch, 
-        perm_idx
-      )
+      pred_y = model( inputs, char_inputs, word_len_in_batch, perm_idx )
+      loss = model.crf_loss(pred_y, labels)
 
       optimiser.zero_grad()
       loss.backward()
@@ -105,11 +92,19 @@ def train_and_evaluate(
 
     # validation every n epoch
     if epoch == 0 or (epoch + 1) % params['log_every_epoch'] == 0:
-      is_best = False
       print('epoch %d/%d: ' % (epoch + 1, params['epoches']))
 
+      is_best = False
+
       # validation
-      val_metrics, val_metrics_str, summary_word_tag_pred = evaluate(train_data_dir, 'valid', model, params, eval_dir=exper_type_dir, data_params_dir=data_params_dir)
+      val_metrics, val_metrics_str, summary_word_tag_pred = evaluate_batch(
+        train_data_dir, 
+        'valid', 
+        model,
+        params, 
+        eval_dir=exper_domain_dir, 
+        data_params_dir=data_params_dir,
+      )
 
       if val_metrics[best_metric] >= best_metric_score:
         best_metric_score = val_metrics[best_metric]
@@ -125,7 +120,7 @@ def train_and_evaluate(
         break
 
 
-      utils.save_model(exper_type_dir, {
+      utils.save_model(exper_domain_dir, {
         'epoch': epoch + 1,
         'model_dict': model
       }, is_best)
@@ -133,8 +128,8 @@ def train_and_evaluate(
 
       if is_best:
         print('best', best_metric, best_metric_score)
-        utils.save_text(os.path.join(exper_type_dir, 'eval_valid_best_result.txt'), summary_word_tag_pred)
-        utils.save_text(os.path.join(exper_type_dir, 'eval_valid_best_metric.txt'), ('Epoch ' + str((epoch + 1)) + ', ' + val_metrics_str).split(', '))
+        utils.save_text(os.path.join(exper_domain_dir, 'eval_valid_best_result.txt'), summary_word_tag_pred)
+        utils.save_text(os.path.join(exper_domain_dir, 'eval_valid_best_metric.txt'), ('Epoch ' + str((epoch + 1)) + ', ' + val_metrics_str).split(', '))
 
 
       # log...
@@ -147,7 +142,7 @@ def train_and_evaluate(
   
 
   # training done
-  utils.save_text(os.path.join(exper_type_dir, 'training_log.txt'), training_log)
+  utils.save_text(os.path.join(exper_domain_dir, 'training_log.txt'), training_log)
   print('Training time: ', time.strftime("%H:%M:%S", time.gmtime(time.time() - start_time)))
 
 

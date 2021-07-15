@@ -323,7 +323,7 @@ def build_ner_profile(
     'use_char_embed': use_char_embed,
     'use_pre_trained': use_pre_trained,
     'glove_word_dim': glove_word_dim,
-    
+
     'train_sent_size': 0,
     'valid_sent_size': 0,
     'test_sent_size': 0,
@@ -398,13 +398,15 @@ def build_ner_profile(
 
   data_statistics['vocab_size'] = len(vocab)
   data_statistics['tag_size'] = len(tags)
+  data_statistics['char_size'] = len(chars)
+
   # for batch version
   data_statistics['tag_size_batch'] = len(tags_batch)
-  data_statistics['char_size'] = len(chars)
 
   word_id, inverse_word_id = map_word_id(vocab)
   tag_id, inverse_tag_id = map_word_id(tags)
   chars_id, inverse_chars_id = map_word_id(chars)
+ 
   # for batch version: 'O' is at the first position
   tag_id_batch = {'O': 0}
   for t in tags_batch:
@@ -429,7 +431,7 @@ def build_ner_profile(
   save_text(path.join(data_dir, 'vocabulary.txt'), vocab)
   save_text(path.join(data_dir, 'tags.txt'), tags)
   save_text(path.join(data_dir, 'tags_batch.txt'), tags_batch)
-  
+
   save_json(path.join(data_dir, 'word_id.json'), word_id)
   save_json(path.join(data_dir, 'id_word.json'), inverse_word_id)
   
