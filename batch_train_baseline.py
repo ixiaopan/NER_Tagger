@@ -38,7 +38,7 @@ def train_and_evaluate(
 
 
   # prepare model
-  model, params = utils.init_baseline_model(BiLSTM_CRF_Batch, data_params_dir, model_param_dir)
+  model, params = utils.init_baseline_model(BiLSTM_CRF_Batch, data_params_dir, model_param_dir, enable_batch=True)
   print('=== parameters ===')
   print(params)
   print('=== model ===')
@@ -71,7 +71,7 @@ def train_and_evaluate(
 
     train_loss_per_epoch = []
 
-    for inputs, labels, char_inputs, word_len_in_batch, perm_idx in train_loader:
+    for inputs, labels, char_inputs, word_len_in_batch, perm_idx, _ in train_loader:
       '''
       inputs: (batch_size, max_seq_len)
       labels: (batch_size, max_seq_len)
@@ -122,7 +122,8 @@ def train_and_evaluate(
 
       utils.save_model(exper_domain_dir, {
         'epoch': epoch + 1,
-        'model_dict': model
+        'model_dict': model.state_dict(),
+        'optim_dict': optimiser.state_dict()
       }, is_best)
 
 

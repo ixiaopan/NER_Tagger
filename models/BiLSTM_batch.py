@@ -221,7 +221,7 @@ class CRF(nn.Module):
           #   [1, 2, ... |num_of_tag| ]                [..]
           # ]                                        ]
           # the value in path_pointer indicates the best previous tag_id
-          last_best_id = path_pointer.gather(dim=1, last_best_id)
+          last_best_id = path_pointer.gather(1, last_best_id)
           best_path.append(last_best_id)
 
       best_path.reverse()
@@ -282,7 +282,7 @@ class BiLSTM_CRF_Batch(nn.Module):
       self.lstm = nn.LSTM(embedding_dim + char_hidden_dim, hidden_dim // 2, bidirectional=True, batch_first=True)
     else:
       self.lstm = nn.LSTM(embedding_dim, hidden_dim // 2, num_layers = 1, bidirectional=True, batch_first=True)
-    self.init_lstm()
+    self.init_lstm(self.lstm)
 
     # context layer
     self.fc = nn.Linear(hidden_dim, self.num_of_tag)
@@ -296,8 +296,8 @@ class BiLSTM_CRF_Batch(nn.Module):
     init.normal_(self.fc.bias.data)
 
 
-  def init_lstm(self):
-    for param in self.lstm.parameters():
+  def init_lstm(self, lstm):
+    for param in lstm.parameters():
       if len(param.shape) >= 2:
           init.orthogonal_(param.data)
       else:
@@ -361,8 +361,8 @@ class BiLSTM_CRF_Batch(nn.Module):
       embed_words = self.word_embed(inputs)
       # (batch_size, max_seq_len, char_hidden_dim)
       concat_char_embed_expand = concat_char_embed.reshape(embed_words.shape[0], -1, concat_char_embed.shape[1])
-      
-      total_embeds = torch.cat((embed_words, concat_char_embed), -1)
+
+      total_embeds = torch.cat((embed_words, concat_char_embed_expand), -1)
 
       total_embeds = self.dropout(total_embeds)
 

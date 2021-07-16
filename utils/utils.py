@@ -52,6 +52,10 @@ def load_model(filepath, model, optimiser=None):
 
   model.load_state_dict(model_dict['model_dict'])
 
+  # print("Model's state_dict:")
+  # for param_tensor in model_dict['model_dict']:
+  #     print(param_tensor, "\t", model_dict['model_dict'][param_tensor].size())
+
   if optimiser:
     optimiser.load_state_dict(model_dict['optim_dict'])
   
@@ -76,7 +80,7 @@ def prepare_model_params(data_params_dir, model_param_dir):
   return params
 
 
-def init_baseline_model(models, data_params_dir, model_param_dir):
+def init_baseline_model(models, data_params_dir, model_param_dir, enable_batch=True):
   '''
   initialise the baseline model
 
@@ -94,11 +98,17 @@ def init_baseline_model(models, data_params_dir, model_param_dir):
     pre_word_embedding = np.load(os.path.join(data_params_dir, 'pre_word_embedding.npy'))
 
 
+  if enable_batch:
+    tag2id = read_json(os.path.join(data_params_dir, 'tag_id_batch.json'))
+  else:
+    tag2id = read_json(os.path.join(data_params_dir, 'tag_id.json'))
+
+
   model = models(
     vocab_size = params['vocab_size'], 
     hidden_dim = params['hidden_dim'], 
     embedding_dim = params['word_embed_dim'], 
-    tag2id = read_json(os.path.join(data_params_dir, 'tag_id.json')), 
+    tag2id = tag2id,
 
     dropout = params['dropout'], 
     pre_word_embedding=pre_word_embedding,
@@ -536,6 +546,7 @@ def build_onto_dataloader(data_dir, data_params_dir=None, type='train', batch_si
     # Step 3.1 padding sentence
     # refer: https://github.com/cs230-stanford/cs230-code-examples/blob/master/pytorch/nlp/model/data_loader.py
     batch_max_len = max([len(s) for s in batch_sentences])
+    seq_len_in_batch = [ len(s) for s in batch_sentences]
 
     # (batch_size, max_seq_len)
     batch_data = word_id[PAD_WORD] * np.ones(( len(batch_sentences), batch_max_len ), dtype=int)
@@ -611,7 +622,7 @@ def build_onto_dataloader(data_dir, data_params_dir=None, type='train', batch_si
     if is_cuda:
       fixed_char_in_batch, batch_data, batch_labels = fixed_char_in_batch.cuda(), batch_data.cuda(), batch_labels.cuda()
 
-    yield batch_data, batch_labels, fixed_char_in_batch, word_len_in_batch, perm_idx
+    yield batch_data, batch_labels, fixed_char_in_batch, word_len_in_batch, perm_idx, seq_len_in_batch
 
 
 

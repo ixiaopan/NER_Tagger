@@ -18,6 +18,24 @@ parser.add_argument('--dataset_type', default='test', help="dataset type")
 parser.add_argument('--model_param_dir', default='./experiments/baseline', help="Directory containing model parameters")
 
 
+def clean_tags(y_true, y_pred):
+  '''
+  y_true: (seq_n, ) python list
+  y_pre: (seq_n, ) python list
+  '''
+
+  y_true = np.array(y_true)
+  y_pred = np.array(y_pred)
+
+  # ignore 2('O')
+  mask = y_true > 0
+
+  # effective NER tags
+  y_true = y_true[mask]
+  y_pred = y_pred[mask]
+
+  return y_true, y_pred
+
 def accuracy(y_true, y_pred):
   return round(accuracy_score(y_true, y_pred)*100, 4)
 
@@ -70,7 +88,7 @@ def evaluate_batch(data_dir, type, model, params, eval_dir, data_params_dir=None
   total_words = []
   summary_word_tag_pred = []
 
-  for inputs, labels, char_inputs, word_len_in_batch, perm_idx in \
+  for inputs, labels, char_inputs, word_len_in_batch, perm_idx, seq_len_in_batch in \
     utils.build_onto_dataloader(
       data_dir, 
       data_params_dir=data_params_dir, 
@@ -82,22 +100,23 @@ def evaluate_batch(data_dir, type, model, params, eval_dir, data_params_dir=None
 
     # step 1 prediction
     pre_labels = model( inputs, char_inputs, word_len_in_batch, perm_idx )
-    pre_labels = model.crf_decode( pre_lables ) # return padded tag_ids
+    pre_labels = model.crf_decode( pre_labels ) # return padded tag_ids
 
     # for each sentence, the original text without padding
     for i, length in enumerate(seq_len_in_batch):
       total_pre_tag += pre_labels[i, :length].data.cpu().numpy().tolist()
       total_true_tag += labels[i, :length].data.cpu().numpy().tolist()
-      total_words = inputs[i, :length].data.cpu().numpy().tolist()
+      total_words += inputs[i, :length].data.cpu().numpy().tolist()
 
     # step 2
     for w_id, true_t_id, pred_t_id in zip(total_words, total_true_tag, total_pre_tag):
       summary_word_tag_pred.append(
         '%15s %8s %8s' % (id_word[ str(w_id) ], id_tag[ str(true_t_id) ], id_tag[ str(pred_t_id) ])
       )
-  
+    
 
   # log...
+  total_true_tag, total_pre_tag = clean_tags(total_true_tag, total_pre_tag)
   summary_batch = { metric: metrics[metric](total_true_tag, total_pre_tag) for metric in metrics }
   summary_batch_str = ", ".join(("{}_{}: {}").format(type, k, v) for k, v in summary_batch.items())
 
@@ -124,7 +143,7 @@ if __name__ == '__main__':
 
 
   # define model
-  model, params = utils.init_baseline_model(BiLSTM_CRF_Batch, data_params_dir, model_param_dir)
+  model, params = utils.init_baseline_model(BiLSTM_CRF_Batch, data_params_dir, model_param_dir, enable_batch=True)
   print('=== parameters ===')
   print(params)
   print('=== model ===')

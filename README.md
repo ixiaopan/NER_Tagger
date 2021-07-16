@@ -58,9 +58,9 @@
 # which is equivalent to the following two lines
 ~ sh baseline.sh toy
 
-~ python train_baseline.py --train_data_dir='./data/toy'
+~ python batch_train_baseline.py --train_data_dir='./data/toy'
 
-~ python eval_baseline.py --data_dir='./data/toy'
+~ python batch_eval_baseline.py --data_dir='./data/toy'
 ```
 
 ### Pool
