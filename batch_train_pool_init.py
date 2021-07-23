@@ -21,11 +21,11 @@ def main():
   model_param_dir = './experiments/pool_init'
   # shared_dict = ['char_embed', 'char_lstm', 'word_embed', 'dropout', 'lstm']
   for name in sorted_domains: # for each domain
-    print('Training {}...'.format(name))
+    train_data_dir = './data/' + name
+
+    print('Training {}...'.format(train_data_dir))
 
     # prepare model
-    train_data_dir = os.path.join('./data', name)
-
     model, params, embedding_params_dir = utils.init_baseline_model(
       BiLSTM_CRF_Batch,
       model_param_dir,
