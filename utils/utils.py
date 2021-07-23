@@ -84,8 +84,7 @@ def init_baseline_model(
   models, 
   model_param_dir, 
   train_data_dir,
-  enable_batch=True, 
-  enable_source_init=False
+  enable_batch=True
 ):
   '''
   initialise the baseline model
@@ -93,19 +92,15 @@ def init_baseline_model(
   @params:
     enable_batch: 
         - labels without __START__ and __STOP__
-    enable_source_init: 
-        - INIT transfer
-        - shared word embedding, train using source domain information
   '''
   # baseline pool, pool_init
   # embedding_params_dir: directory containing the vocabulary used to config NER model
   #       - individual domain: bc, mz
   #       - pool/pool_init: utilize all avaliable data from all domains
-  # data_params_dir: data to be trained/evaluated
   transfer_method = model_param_dir.split('/')[-1] 
   if transfer_method == 'pool': # using pool
     embedding_params_dir = './data/pool'
-  
+
   elif transfer_method == 'pool_init':
     embedding_params_dir = './data/pool'
 
@@ -122,10 +117,12 @@ def init_baseline_model(
   char2id = read_json(os.path.join(embedding_params_dir, 'char_id.json'))
 
 
+  tag_from = embedding_params_dir
+  # tag_from = train_data_dir
   if enable_batch:
-    tag2id = read_json(os.path.join(train_data_dir, 'tag_id_batch.json'))
+    tag2id = read_json(os.path.join(tag_from, 'tag_id_batch.json'))
   else:
-    tag2id = read_json(os.path.join(train_data_dir, 'tag_id.json'))
+    tag2id = read_json(os.path.join(tag_from, 'tag_id.json'))
 
 
   model = models(
@@ -518,10 +515,12 @@ def build_onto_dataloader(
   id_word = read_json(path.join(embedding_params_dir, 'id_word.json'))
   char_id = read_json(path.join(embedding_params_dir, 'char_id.json'))
 
+  tag_from = embedding_params_dir
+  # tag_from = data_dir
   if enable_batch:
-    tag_id = read_json(path.join(data_dir, 'tag_id_batch.json'))
+    tag_id = read_json(path.join(tag_from, 'tag_id_batch.json'))
   else:
-    tag_id = read_json(path.join(data_dir, 'tag_id.json'))
+    tag_id = read_json(path.join(tag_from, 'tag_id.json'))
 
 
   PAD_WORD = data_stats['pad_word']

@@ -81,7 +81,10 @@ def evaluate_batch(data_dir, type, model, params, eval_dir, embedding_params_dir
   model.eval()
   
   id_word = utils.read_json(os.path.join(embedding_params_dir, 'id_word.json'))
-  id_tag = utils.read_json(os.path.join(data_dir, 'id_tag_batch.json'))
+  
+  tag_from = embedding_params_dir
+  # tag_from = data_dir
+  id_tag = utils.read_json(os.path.join(tag_from, 'id_tag_batch.json'))
 
   total_pre_tag = [] # (all words in this batch)
   total_true_tag = []  # (all words in this batch)

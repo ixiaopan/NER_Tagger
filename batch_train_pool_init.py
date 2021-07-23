@@ -19,7 +19,7 @@ def main():
   # parameter transfer
   pre_domain = None
   model_param_dir = './experiments/pool_init'
-  shared_dict = ['char_embed', 'char_lstm', 'word_embed', 'dropout', 'lstm']
+  # shared_dict = ['char_embed', 'char_lstm', 'word_embed', 'dropout', 'lstm']
   for name in sorted_domains: # for each domain
     print('Training {}...'.format(name))
 
@@ -47,11 +47,11 @@ def main():
       # lstm.weight_ih_l0_reverse', 'lstm.weight_hh_l0_reverse', 'lstm.bias_ih_l0_reverse', 'lstm.bias_hh_l0_reverse', 
       # 'fc.weight', 'fc.bias', 
       # 'crf.transitionMatrix', 'crf.start_transitions', 'crf.stop_transitions']
-      pre_model_dict = {k: v for k, v in pre_model_dict.items() if k.split('.')[0] in shared_dict}
+      # pre_model_dict = {k: v for k, v in pre_model_dict.items() if k.split('.')[0] in shared_dict}
 
-      cur_model_dict = model.state_dict()
-      cur_model_dict.update(pre_model_dict) 
-      model.load_state_dict(cur_model_dict)
+      # cur_model_dict = model.state_dict()
+      # cur_model_dict.update(pre_model_dict) 
+      model.load_state_dict(pre_model_dict)
 
     pre_domain = name
 
@@ -60,7 +60,16 @@ def main():
       model_param_dir=model_param_dir, 
       model_meta={ 'model': model, 'params': params, 'embedding_params_dir': embedding_params_dir }
     )
-    
+  
+
+
+  print('copy the last model into pool_init...')
+  dest_dir = os.path.join(model_param_dir, 'pool_init')
+  if not os.path.exists(dest_dir):
+    os.makedir(dest_dir)
+
+  copy(os.path.join(model_param_dir, sorted_domains[-1], 'best.pth.tar'), dest_dir)
+
 
 if __name__ == '__main__':
   main()
