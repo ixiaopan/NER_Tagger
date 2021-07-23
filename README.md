@@ -55,9 +55,9 @@
 
 ```bash
 
-# which is equivalent to the following two lines
 ~ sh baseline.sh toy
 
+# or step train_eval
 ~ python batch_train_baseline.py --train_data_dir='./data/toy'
 
 ~ python batch_eval_baseline.py --data_dir='./data/toy'
@@ -66,14 +66,17 @@
 ### Pool
 ```bash
 
-~ python train_baseline.py --train_data_dir='./data/pool' --model_param_dir='./experiments/pool'
+~ python batch_train_baseline.py --train_data_dir='./data/pool' --model_param_dir='./experiments/pool'
 
-~ python eval_baseline.py --data_dir='./data/mz' --model_param_dir='./experiments/pool'
+~ python batch_eval_baseline.py --data_dir='./data/tc' --model_param_dir='./experiments/pool'
 ```
 
 
 ### Pool-Init
 
+```bash
+~ python batch_train_pool_init.py --model_param_dir='./experiments/pool_init'
+```
 
 
 ## References

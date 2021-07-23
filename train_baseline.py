@@ -28,23 +28,20 @@ def train_and_evaluate(
   best_metric='micro_f1',
   early_stop_num_epoch=5
 ):
-  # baseline pool, pool_init
-  transfer_method = model_param_dir.split('/')[-1] 
-  if transfer_method in ['pool', 'pool_init']: # using pool
-    data_params_dir = './data/pool'
-  elif transfer_method == 'baseline':
-    data_params_dir = train_data_dir
 
   # prepare model
-  model, params = utils.init_baseline_model(BiLSTM_CRF, data_params_dir, model_param_dir)
+  model, params, embedding_params_dir = utils.init_baseline_model(
+    BiLSTM_CRF, 
+    model_param_dir,
+    train_data_dir,
+    enable_batch=False,
+  )
   print('=== parameters ===')
   print(params)
   print('=== model ===')
   print(model)
 
   optimiser = optim.Adam(model.parameters(), lr=params['learning_rate'], weight_decay=params['weight_decay'])
-
-  logger = utils.Logger(params['debug'])
 
   # train model
   print('=== training ===')
@@ -62,15 +59,15 @@ def train_and_evaluate(
   for epoch in range(params['epoches']):
     train_loader = utils.build_onto_dataloader(
       train_data_dir, 
-      data_params_dir=data_params_dir,
       type='train', 
+      embedding_params_dir=embedding_params_dir,
       batch_size=params['batch_size'], 
       is_cuda=params['cuda']
     )
 
     train_loss_per_epoch = []
 
-    for inputs, labels, char_inputs, word_len_in_batch, perm_idx in train_loader:
+    for inputs, labels, char_inputs, word_len_in_batch, perm_idx, _ in train_loader:
       '''
       only one sentence
       inputs: (seq_len)
@@ -78,11 +75,6 @@ def train_and_evaluate(
       char_inputs: (seq_len, max_word_len)
       word_len_in_batch: word_len in batch
       '''
-
-      logger.log('inputs shape:', inputs.shape)
-      logger.log('labels shape:', labels.shape)
-      logger.log('char_inputs shape:', char_inputs.shape)
-
 
       loss = model.neg_log_likelihood(
         inputs, 
@@ -105,7 +97,14 @@ def train_and_evaluate(
       print('epoch %d/%d: ' % (epoch + 1, params['epoches']))
 
       # validation
-      val_metrics, val_metrics_str, summary_word_tag_pred = evaluate(train_data_dir, 'valid', model, params, eval_dir=exper_type_dir, data_params_dir=data_params_dir)
+      val_metrics, val_metrics_str, summary_word_tag_pred = evaluate(
+        train_data_dir, 
+        'valid', 
+        model, 
+        params, 
+        eval_dir=exper_type_dir, 
+        embedding_params_dir = embedding_params_dir,
+      )
 
       if val_metrics[best_metric] >= best_metric_score:
         best_metric_score = val_metrics[best_metric]

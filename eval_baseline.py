@@ -78,21 +78,21 @@ metrics = {
 }
 
 
-def evaluate(data_dir, type, model, params, eval_dir, data_params_dir=None):
+def evaluate(data_dir, type, model, params, eval_dir, embedding_params_dir=None):
   model.eval()
   
-  id_word = utils.read_json(os.path.join(data_params_dir, 'id_word.json'))
-  id_tag = utils.read_json(os.path.join(data_params_dir, 'id_tag.json'))
+  id_word = utils.read_json(os.path.join(embedding_params_dir, 'id_word.json'))
+  id_tag = utils.read_json(os.path.join(data_dir, 'id_tag.json'))
 
   total_pre_tag = []
   total_true_tag = []
   summary_word_tag_pred = []
 
-  for inputs, labels, char_inputs, word_len_in_batch, perm_idx in \
+  for inputs, labels, char_inputs, word_len_in_batch, perm_idx, _ in \
     utils.build_onto_dataloader(
       data_dir, 
-      data_params_dir=data_params_dir, 
       type=type, 
+      embedding_params_dir=embedding_params_dir,
       batch_size=params['batch_size'], 
       is_cuda=params['cuda']
     ):
@@ -126,18 +126,14 @@ def evaluate(data_dir, type, model, params, eval_dir, data_params_dir=None):
 if __name__ == '__main__':
   args = parser.parse_args()
   data_dir, model_param_dir = args.data_dir, args.model_param_dir
-  
-  # baseline pool, pool_init
-  transfer_method = model_param_dir.split('/')[-1] 
-  if transfer_method in ['pool', 'pool_init']: # using pool
-    data_params_dir = './data/pool'
-  elif transfer_method == 'baseline':
-    data_params_dir = data_dir
-
-
 
   # define model
-  model, params = utils.init_baseline_model(BiLSTM_CRF, data_params_dir, model_param_dir)
+  model, params, embedding_params_dir = utils.init_baseline_model(
+    BiLSTM_CRF, 
+    model_param_dir,
+    data_dir,
+    enable_batch=False
+  )
   print('=== parameters ===')
   print(params)
   print('=== model ===')
@@ -145,6 +141,7 @@ if __name__ == '__main__':
 
 
   # load best model
+  transfer_method = model_param_dir.split('/')[-1]
   if transfer_method == 'baseline':
     model = utils.load_model(os.path.join(model_param_dir, data_dir.split('/')[-1], 'best.pth.tar'), model)
   else:
@@ -160,7 +157,7 @@ if __name__ == '__main__':
     model, 
     params, 
     eval_dir=os.path.join(model_param_dir, data_dir.split('/')[-1]),
-    data_params_dir=data_params_dir
+    embedding_params_dir = embedding_params_dir
 
   )
   print(summary_batch_str)

@@ -58,12 +58,12 @@ def load_model(filepath, model, optimiser=None):
 
   if optimiser:
     optimiser.load_state_dict(model_dict['optim_dict'])
-  
+
   return model
 
 
 
-def prepare_model_params(data_params_dir, model_param_dir):
+def prepare_model_params(embedding_params_dir, model_param_dir):
   # GPU available
   is_cuda = torch.cuda.is_available()
   device = torch.device('cuda' if is_cuda else 'cpu')
@@ -73,35 +73,59 @@ def prepare_model_params(data_params_dir, model_param_dir):
   params['cuda'] = is_cuda
   params['device'] = device
 
-  # merge dataset params
-  data_params = read_json(os.path.join(data_params_dir, 'dataset_params.json'))
-  params.update(data_params)
+  # merge embedding params
+  embed_params = read_json(os.path.join(embedding_params_dir, 'dataset_params.json'))
+  params.update(embed_params)
 
   return params
 
 
-def init_baseline_model(models, data_params_dir, model_param_dir, enable_batch=True):
+def init_baseline_model(
+  models, 
+  model_param_dir, 
+  train_data_dir,
+  enable_batch=True, 
+  enable_source_init=False
+):
   '''
   initialise the baseline model
 
   @params:
-    data_params_dir: directory containing the vocabulary used to config NER model
-        - individual domain: bc, mz
-        - pool domain: utilize all avaliable data from all domains
+    enable_batch: 
+        - labels without __START__ and __STOP__
+    enable_source_init: 
+        - INIT transfer
+        - shared word embedding, train using source domain information
   '''
+  # baseline pool, pool_init
+  # embedding_params_dir: directory containing the vocabulary used to config NER model
+  #       - individual domain: bc, mz
+  #       - pool/pool_init: utilize all avaliable data from all domains
+  # data_params_dir: data to be trained/evaluated
+  transfer_method = model_param_dir.split('/')[-1] 
+  if transfer_method == 'pool': # using pool
+    embedding_params_dir = './data/pool'
+  
+  elif transfer_method == 'pool_init':
+    embedding_params_dir = './data/pool'
 
-  params = prepare_model_params(data_params_dir, model_param_dir)
+  elif transfer_method == 'baseline':
+    embedding_params_dir = train_data_dir
 
+  params = prepare_model_params(embedding_params_dir, model_param_dir)
+  
   # define model
-  pre_word_embedding=None
+  pre_word_embedding = None
   if bool(params['use_pre_trained']):
-    pre_word_embedding = np.load(os.path.join(data_params_dir, 'pre_word_embedding.npy'))
+    pre_word_embedding = np.load(os.path.join(embedding_params_dir, 'pre_word_embedding.npy'))
+
+  char2id = read_json(os.path.join(embedding_params_dir, 'char_id.json'))
 
 
   if enable_batch:
-    tag2id = read_json(os.path.join(data_params_dir, 'tag_id_batch.json'))
+    tag2id = read_json(os.path.join(train_data_dir, 'tag_id_batch.json'))
   else:
-    tag2id = read_json(os.path.join(data_params_dir, 'tag_id.json'))
+    tag2id = read_json(os.path.join(train_data_dir, 'tag_id.json'))
 
 
   model = models(
@@ -109,14 +133,13 @@ def init_baseline_model(models, data_params_dir, model_param_dir, enable_batch=T
     hidden_dim = params['hidden_dim'], 
     embedding_dim = params['word_embed_dim'], 
     tag2id = tag2id,
-
     dropout = params['dropout'], 
-    pre_word_embedding=pre_word_embedding,
 
+    pre_word_embedding = pre_word_embedding,
     use_char_embed = params['use_char_embed'], 
     char_embedding_dim = params['char_embed_dim'], 
     char_hidden_dim = params['char_hidden_dim'],
-    char2id = read_json(os.path.join(data_params_dir, 'char_id.json')),
+    char2id = char2id,
 
     device=params['device']
   )
@@ -124,7 +147,7 @@ def init_baseline_model(models, data_params_dir, model_param_dir, enable_batch=T
   if params['cuda']:
     model.to(params['device'])
 
-  return model, params
+  return model, params, embedding_params_dir
 
 
 
@@ -466,7 +489,15 @@ def build_ner_profile(
 
 
 
-def build_onto_dataloader(data_dir, data_params_dir=None, type='train', batch_size = 1, shuffle = True, is_cuda=False, enable_batch=False):
+def build_onto_dataloader(
+  data_dir, 
+  type='train', 
+  embedding_params_dir=None,
+  batch_size = 1, 
+  shuffle = True, 
+  is_cuda = False, 
+  enable_batch=False
+):
   '''
   Refer: https://gist.github.com/HarshTrivedi/f4e7293e941b17d19058f6fb90ab0fec
 
@@ -474,26 +505,28 @@ def build_onto_dataloader(data_dir, data_params_dir=None, type='train', batch_si
     - Customised dataloder designed for Ontonotes
   @params
     - data_dir: './data/bc'
-    - data_params_dir: directory containing the vocabulary used to config NER model
+    - type: train, test, valid
+    - embedding_params_dir: directory containing the vocabulary used to config NER model
         - individual domain: bc, mz
         - pool domain: utilize all avaliable data from all domains
-    - type: train, test, valid
   @return 
     - Generator: (batch_sent, batch_labels, batch_chars, word_len_per_sent)
   '''
 
-  data_stats = read_json(path.join(data_params_dir, 'dataset_params.json'))
-  word_id = read_json(path.join(data_params_dir, 'word_id.json'))
-  id_word = read_json(path.join(data_params_dir, 'id_word.json'))
-  char_id = read_json(path.join(data_params_dir, 'char_id.json'))
+  data_stats = read_json(path.join(embedding_params_dir, 'dataset_params.json'))
+  word_id = read_json(path.join(embedding_params_dir, 'word_id.json'))
+  id_word = read_json(path.join(embedding_params_dir, 'id_word.json'))
+  char_id = read_json(path.join(embedding_params_dir, 'char_id.json'))
 
-  tag_id = read_json(path.join(data_params_dir, 'tag_id.json'))
   if enable_batch:
-    tag_id = read_json(path.join(data_params_dir, 'tag_id_batch.json'))
+    tag_id = read_json(path.join(data_dir, 'tag_id_batch.json'))
+  else:
+    tag_id = read_json(path.join(data_dir, 'tag_id.json'))
 
 
   PAD_WORD = data_stats['pad_word']
   UNK_WORD = data_stats['unk_word']
+
 
   # Step 1
   sentences, tags = [], []

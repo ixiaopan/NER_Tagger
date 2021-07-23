@@ -27,18 +27,21 @@ def train_and_evaluate(
   train_data_dir, 
   model_param_dir='./experiments/baseline', 
   best_metric='micro_f1',
-  early_stop_num_epoch=5
+  early_stop_num_epoch=5,
+  model_meta = None
 ):
-  # baseline pool, pool_init
-  transfer_method = model_param_dir.split('/')[-1] 
-  if transfer_method in ['pool', 'pool_init']: # using pool
-    data_params_dir = './data/pool'
-  elif transfer_method == 'baseline':
-    data_params_dir = train_data_dir
+  if model_meta is None:
+    # prepare model
+    model, params, embedding_params_dir = utils.init_baseline_model(
+      BiLSTM_CRF_Batch, 
+      model_param_dir, 
+      train_data_dir,
+      enable_batch=True
+    )
+  else:
+    model, params, embedding_params_dir = model_meta['model'], model_meta['params'], model_meta['embedding_params_dir']
 
 
-  # prepare model
-  model, params = utils.init_baseline_model(BiLSTM_CRF_Batch, data_params_dir, model_param_dir, enable_batch=True)
   print('=== parameters ===')
   print(params)
   print('=== model ===')
@@ -62,8 +65,8 @@ def train_and_evaluate(
   for epoch in range(params['epoches']):
     train_loader = utils.build_onto_dataloader(
       train_data_dir, 
-      data_params_dir=data_params_dir,
       type='train',
+      embedding_params_dir=embedding_params_dir,
       batch_size=params['batch_size'], 
       is_cuda=params['cuda'],
       enable_batch=True
@@ -102,8 +105,8 @@ def train_and_evaluate(
         'valid', 
         model,
         params, 
-        eval_dir=exper_domain_dir, 
-        data_params_dir=data_params_dir,
+        eval_dir = exper_domain_dir, 
+        embedding_params_dir = embedding_params_dir,
       )
 
       if val_metrics[best_metric] >= best_metric_score:
