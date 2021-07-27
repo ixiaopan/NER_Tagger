@@ -26,4 +26,3 @@ if __name__ == '__main__':
       utils.save_text(os.path.join('./data', 'pool_' + cur_genre, dtype, 'labels.txt'), y)
 
     print(' - {} done'.format(cur_genre))
-
