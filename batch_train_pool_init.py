@@ -64,10 +64,10 @@ def main():
   
 
 
-  print('copy the last model into pool_init...')
+  print('copy', sorted_domains[-1], 'into pool_init...')
   dest_dir = os.path.join(model_param_dir, 'pool_init')
   if not os.path.exists(dest_dir):
-    os.makedir(dest_dir)
+    os.mkdir(dest_dir)
 
   copy(os.path.join(model_param_dir, sorted_domains[-1], 'best.pth.tar'), dest_dir)
 

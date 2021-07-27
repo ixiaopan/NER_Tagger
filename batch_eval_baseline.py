@@ -36,6 +36,7 @@ def clean_tags(y_true, y_pred):
 
   return y_true, y_pred
 
+
 def accuracy(y_true, y_pred):
   return round(accuracy_score(y_true, y_pred)*100, 4)
 

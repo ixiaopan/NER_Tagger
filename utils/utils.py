@@ -162,8 +162,13 @@ def save_text(filepath, text, transform_fn=None):
         f.write('{}\n'.format(line))
       else:
         f.write('{}'.format(line))
-      
 
+
+def read_text(fpath, encoding="utf8"):
+  with open(fpath, 'r', encoding=encoding) as f:
+    data = f.readlines()
+
+  return data
 
 
 def save_json(filepath, text):

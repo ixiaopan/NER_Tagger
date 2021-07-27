@@ -63,6 +63,7 @@
 ~ python batch_eval_baseline.py --data_dir='./data/toy'
 ```
 
+
 ### Pool
 ```bash
 
@@ -76,6 +77,8 @@
 
 ```bash
 ~ python batch_train_pool_init.py --model_param_dir='./experiments/pool_init'
+
+~ python batch_eval_baseline.py --data_dir='./data/tc' --model_param_dir='./experiments/pool_init'
 ```
 
 
