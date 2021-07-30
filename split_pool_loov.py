@@ -17,10 +17,10 @@ if __name__ == '__main__':
 
       for other_domain in remaining_domains:
         d_sent = utils.read_text(os.path.join('./data', other_domain, dtype, 'sentences.txt'))
-        X.append(d_sent)
+        X += d_sent
 
         d_label = utils.read_text(os.path.join('./data', other_domain, dtype, 'labels.txt'))
-        y.append(d_label)
+        y += d_label
 
       utils.save_text(os.path.join('./data', 'pool_' + cur_genre, dtype, 'sentences.txt'), X)
       utils.save_text(os.path.join('./data', 'pool_' + cur_genre, dtype, 'labels.txt'), y)
