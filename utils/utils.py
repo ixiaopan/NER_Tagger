@@ -98,14 +98,16 @@ def init_baseline_model(
   #       - individual domain: bc, mz
   #       - pool/pool_init: utilize all avaliable data from all domains
   transfer_method = model_param_dir.split('/')[-1] 
-  if transfer_method == 'pool': # using pool
-    embedding_params_dir = './data/pool'
 
+  if transfer_method == 'baseline':
+    embedding_params_dir = train_data_dir
+  
   elif transfer_method == 'pool_init':
     embedding_params_dir = './data/pool'
 
-  elif transfer_method == 'baseline':
-    embedding_params_dir = train_data_dir
+  else: # using pool
+    embedding_params_dir = './data/' + transfer_method
+
 
   params = prepare_model_params(embedding_params_dir, model_param_dir)
   
