@@ -166,10 +166,7 @@ def save_text(filepath, text, transform_fn=None):
 
 def read_text(fpath, encoding="utf8"):
   with open(fpath, 'r', encoding=encoding) as f:
-    data = f.readlines()
-
-  return data
-
+    return [ line for line in f ]
 
 def save_json(filepath, text):
   parent_directory = os.path.dirname(filepath)
