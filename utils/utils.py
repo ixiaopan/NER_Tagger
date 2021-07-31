@@ -8,6 +8,7 @@ from os import path
 import json
 import csv
 import numpy as np
+import pandas as pd
 from collections import Counter
 
 import torch
@@ -188,6 +189,21 @@ def read_json(filepath):
   return data
 
 
+def load_sentences(domain='wb', split_type=['train', 'test', 'valid'], col_name='sentences'):
+    sents = None
+
+    for dt in ['train', 'test', 'valid']:
+        if dt not in split_type:
+            continue
+
+        dt_sents = pd.read_csv('./data/' + domain + '/' + dt + '/' + col_name + '.txt', sep='\n', header=None)
+        if sents is None:
+            sents = dt_sents
+        else:
+            sents = pd.concat([sents, dt_sents], axis=0)
+
+    sents.columns = [col_name]
+    return sents
 
 def split_train_val_test(corpus, corpus_tag, shuffle=True):
   total_len = len(corpus)
