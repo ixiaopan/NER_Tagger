@@ -40,7 +40,7 @@ def train_and_evaluate():
     LSTM
   '''
 
-  model, params = utils.prepare_model_mult_domain(embedding_params_dir, model_param_dir, multi_domain_config)
+  model, params = utils.prepare_model_mult_domain(BiLSTM_CRF_Mult, embedding_params_dir, model_param_dir, multi_domain_config)
 
   print('=== parameters ===')
   print(params)

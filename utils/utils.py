@@ -90,14 +90,14 @@ multi_domain_config = {
   }
 }
 
-def prepare_model_mult_domain(embedding_params_dir, model_param_dir, multi_domain_config):
+def prepare_model_mult_domain(models, embedding_params_dir, model_param_dir, multi_domain_config):
   pre_word_embedding = np.load(os.path.join(embedding_params_dir, 'pre_word_embedding.npy'))
   char2id = read_json(os.path.join(embedding_params_dir, 'char_id.json'))
   # tag2id = read_json(os.path.join(embedding_params_dir, 'tag_id_batch.json'))
 
   params = prepare_model_params(embedding_params_dir, model_param_dir)
 
-  model = BiLSTM_CRF_Mult(
+  model = models(
     vocab_size = params['vocab_size'], 
     hidden_dim = params['hidden_dim'], 
     embedding_dim = params['word_embed_dim'], 

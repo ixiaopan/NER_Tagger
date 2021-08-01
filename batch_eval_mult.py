@@ -9,8 +9,7 @@ from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_sc
 from sklearn.metrics import confusion_matrix as confusion_matrix_score
 
 from utils import utils 
-from models.BiLSTM_batch import BiLSTM_CRF_Batch
-
+from models.BiLSTM_mult import BiLSTM_CRF_Mult
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir', default='./data/toy', help="dataset to be tested")
@@ -157,7 +156,7 @@ if __name__ == '__main__':
   data_dir, model_param_dir = args.data_dir, args.model_param_dir
 
   # init model
-  model, params = utils.prepare_model_mult_domain(embedding_params_dir, model_param_dir, multi_domain_config)
+  model, params = utils.prepare_model_mult_domain(BiLSTM_CRF_Mult, embedding_params_dir, model_param_dir, multi_domain_config)
 
   print('=== parameters ===')
   print(params)
