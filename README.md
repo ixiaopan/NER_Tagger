@@ -74,7 +74,21 @@
 # data pooling aggregated data from leave-one-domain-out domains
 ~ python batch_train_baseline.py --train_data_dir='./data/pool_bc' --model_param_dir='./experiments/pool_bc'
 
-~ python batch_eval_baseline.py --data_dir='./data/tc' --model_param_dir='./experiments/pool_bc'
+~ python batch_eval_baseline.py --data_dir='./data/bc' --model_param_dir='./experiments/pool_bc'
+```
+
+### Feature Type
+
+```bash
+# sent length [5, 10, 30, 60, max]
+~ python split_by_sent_len.py --domain='bc'
+
+~ python batch_eval_baseline.py --data_dir='./data/bc' --split_type='test_sent_5' --model_param_dir='./experiments/pool_bc'
+
+# rare word [5, 25, 50, 75, 100]
+~ python split_by_rare_word.py --domain='bc'
+
+~ python batch_eval_baseline.py --data_dir='./data/bc' --split_type='test_rare_5' --model_param_dir='./experiments/pool_bc'
 ```
 
 

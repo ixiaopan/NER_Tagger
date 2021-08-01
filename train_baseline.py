@@ -59,7 +59,7 @@ def train_and_evaluate(
   for epoch in range(params['epoches']):
     train_loader = utils.build_onto_dataloader(
       train_data_dir, 
-      type='train', 
+      split_type='train', 
       embedding_params_dir=embedding_params_dir,
       batch_size=params['batch_size'], 
       is_cuda=params['cuda']

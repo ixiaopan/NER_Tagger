@@ -14,7 +14,7 @@ from models.BiLSTM_batch import BiLSTM_CRF_Batch
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir', default='./data/toy', help="dataset to be tested")
-parser.add_argument('--dataset_type', default='test', help="dataset type")
+parser.add_argument('--split_type', default='test', help="subdataset type")
 parser.add_argument('--model_param_dir', default='./experiments/baseline', help="Directory containing model parameters")
 
 
@@ -95,7 +95,7 @@ def evaluate_batch(data_dir, type, model, params, eval_dir, embedding_params_dir
   for inputs, labels, char_inputs, word_len_in_batch, perm_idx, seq_len_in_batch in \
     utils.build_onto_dataloader(
       data_dir, 
-      type=type, 
+      split_type=type, 
       embedding_params_dir=embedding_params_dir,
       batch_size=params['batch_size'], 
       is_cuda=params['cuda'],
@@ -161,7 +161,7 @@ if __name__ == '__main__':
   print('=== Score ===')
   test_metrics, summary_batch_str, _ = evaluate_batch(
     data_dir, 
-    args.dataset_type, 
+    args.split_type, 
     model, 
     params, 
     eval_dir = os.path.join(model_param_dir, data_dir.split('/')[-1]),

@@ -509,7 +509,7 @@ def build_ner_profile(
 
 def build_onto_dataloader(
   data_dir, 
-  type='train', 
+  split_type='train', 
   embedding_params_dir=None,
   batch_size = 1, 
   shuffle = True, 
@@ -523,7 +523,7 @@ def build_onto_dataloader(
     - Customised dataloder designed for Ontonotes
   @params
     - data_dir: './data/bc'
-    - type: train, test, valid
+    - split_type: train, test, valid
     - embedding_params_dir: directory containing the vocabulary used to config NER model
         - individual domain: bc, mz
         - pool domain: utilize all avaliable data from all domains
@@ -550,14 +550,14 @@ def build_onto_dataloader(
 
   # Step 1
   sentences, tags = [], []
-  with open(path.join(data_dir, type, 'sentences.txt'), encoding="utf8") as f:
+  with open(path.join(data_dir, split_type, 'sentences.txt'), encoding="utf8") as f:
     for line in f.read().split('\n'): # for each line
       sent = [ word_id[w] if w in word_id else word_id[UNK_WORD] 
           for w in line.split() ]
       sentences.append(sent)
 
 
-  with open(path.join(data_dir, type, 'labels.txt'), encoding="utf8") as f:
+  with open(path.join(data_dir, split_type, 'labels.txt'), encoding="utf8") as f:
     for line in f.read().split('\n'): # for each line
       tag_line = [ tag_id[t] for t in line.split() ]
       tags.append(tag_line)

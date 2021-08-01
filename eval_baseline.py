@@ -94,7 +94,7 @@ def evaluate(data_dir, type, model, params, eval_dir, embedding_params_dir=None)
   for inputs, labels, char_inputs, word_len_in_batch, perm_idx, _ in \
     utils.build_onto_dataloader(
       data_dir, 
-      type=type, 
+      split_type=type, 
       embedding_params_dir=embedding_params_dir,
       batch_size=params['batch_size'], 
       is_cuda=params['cuda']
