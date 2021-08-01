@@ -6,10 +6,15 @@ import time
 import numpy as np
 import torch.optim as optim
 from knockknock import teams_sender
+from configparser import ConfigParser
+
 
 from utils import utils
 from models.BiLSTM_mult import BiLSTM_CRF_Mult
 from batch_eval_mult import evaluate_batch, clean_tags,metrics
+
+config_parser = ConfigParser()
+config_parser.read('config.ini')
 
 
 multi_domain_config = utils.multi_domain_config.copy()
