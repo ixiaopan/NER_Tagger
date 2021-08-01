@@ -118,7 +118,7 @@ def evaluate(data_dir, type, model, params, eval_dir, embedding_params_dir=None)
   summary_batch = { metric: metrics[metric](total_true_tag, total_pre_tag) for metric in metrics }
   summary_batch_str = ", ".join(("{}_{}: {}").format(type, k, v) for k, v in summary_batch.items())
 
-  if type == 'test':
+  if 'test' in type:
     utils.save_text(os.path.join(eval_dir, 'eval_' + type + '_best_result.txt'), summary_word_tag_pred)
     utils.save_text(os.path.join(eval_dir, 'eval_' + type + '_best_metric.txt'), summary_batch_str.split(', '))
  
