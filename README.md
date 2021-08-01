@@ -82,13 +82,16 @@
 ```bash
 # sent length [10, 30, 60, max]
 ~ python split_by_sent_len.py --domain='bc'
-
-~ python batch_eval_baseline.py --data_dir='./data/bc' --split_type='test_sent_5' --model_param_dir='./experiments/pool_bc'
-
 # rare word [7, 12, 25, 50, 100]
 ~ python split_by_rare_word.py --domain='bc'
+# 
+~ sh feature.sh bn [max_len]
 
-~ python batch_eval_baseline.py --data_dir='./data/bc' --split_type='test_rare_5' --model_param_dir='./experiments/pool_bc'
+
+# or step eval
+~ python batch_eval_baseline.py --data_dir='./data/bc' --split_type='test_sent_10' --model_param_dir='./experiments/pool_bc'
+
+~ python batch_eval_baseline.py --data_dir='./data/bc' --split_type='test_rare_7' --model_param_dir='./experiments/pool_bc'
 ```
 
 
