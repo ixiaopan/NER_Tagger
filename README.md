@@ -94,6 +94,14 @@
 ~ python batch_eval_baseline.py --data_dir='./data/bc' --split_type='test_rare_7' --model_param_dir='./experiments/pool_bc'
 ```
 
+### Multi-Shared CRF
+
+```bash
+~ python batch_train_mult.py
+
+```
+
+
 
 ### Pool-Init
 

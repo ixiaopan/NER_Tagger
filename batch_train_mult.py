@@ -45,6 +45,7 @@ model_param_dir = './experiments/mult_private'
 best_metric = 'micro_f1'
 early_stop_num_epoch = 5
 
+
 def prepare_model_mult_domain():
   pre_word_embedding = np.load(os.path.join(embedding_params_dir, 'pre_word_embedding.npy'))
   char2id = utils.read_json(os.path.join(embedding_params_dir, 'char_id.json'))
@@ -114,8 +115,7 @@ def train_and_evaluate():
       d_config['lines'] = len(f.readlines())
     d_config['batches'] = (d_config['lines'] // d_config['batch_size'] + (0 if d_config['lines'] % d_config['batch_size'] == 0 else 1))
 
-  min_batches = np.min(v['batches'] for v in multi_domain_config.values())
-
+  min_batches = np.min( [ v['batches'] for v in multi_domain_config.values() ])
 
 
   best_metric_score = 0
