@@ -537,7 +537,7 @@ def build_onto_dataloader(
   char_id = read_json(path.join(embedding_params_dir, 'char_id.json'))
 
   tag_from = embedding_params_dir
-  # tag_from = data_dir
+  # tag_from = data_dir # for disjoint labels
   if enable_batch:
     tag_id = read_json(path.join(tag_from, 'tag_id_batch.json'))
   else:
