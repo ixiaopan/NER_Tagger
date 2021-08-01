@@ -297,8 +297,6 @@ class BiLSTM_CRF_Mult(nn.Module):
 
       setattr(self, d_crf_name, CRF(d_num_of_tag))
 
-    self.multi_domain_config = multi_domain_config
-
   
   def init_lstm(self, lstm):
     for param in lstm.parameters():

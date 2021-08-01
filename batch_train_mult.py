@@ -12,32 +12,7 @@ from models.BiLSTM_mult import BiLSTM_CRF_Mult
 from batch_eval_mult import evaluate_batch, clean_tags,metrics
 
 
-multi_domain_config = {
-  'bc': {
-    'batch_size': 64,
-    'num_of_tag': 7
-  },
-  'bn': {
-    'batch_size': 48,
-    'num_of_tag': 7
-  },
-  'mz': {
-    'batch_size': 32,
-    'num_of_tag': 7
-  },
-  'nw': {
-    'batch_size': 128,
-    'num_of_tag': 7
-  },
-  'tc': {
-    'batch_size': 48,
-    'num_of_tag': 7
-  },
-  'wb': {
-    'batch_size': 64,
-    'num_of_tag': 7
-  }
-}
+multi_domain_config = utils.multi_domain_config.copy()
 
 embedding_params_dir = './data/pool'
 model_param_dir = './experiments/mult_private'
@@ -46,36 +21,7 @@ best_metric = 'micro_f1'
 early_stop_num_epoch = 5
 
 
-def prepare_model_mult_domain():
-  pre_word_embedding = np.load(os.path.join(embedding_params_dir, 'pre_word_embedding.npy'))
-  char2id = utils.read_json(os.path.join(embedding_params_dir, 'char_id.json'))
-  # tag2id = utils.read_json(os.path.join(embedding_params_dir, 'tag_id_batch.json'))
-
-  params = utils.prepare_model_params(embedding_params_dir, model_param_dir)
-
-  model = BiLSTM_CRF_Mult(
-    vocab_size = params['vocab_size'], 
-    hidden_dim = params['hidden_dim'], 
-    embedding_dim = params['word_embed_dim'], 
-    dropout = params['dropout'],
-    multi_domain_config = multi_domain_config.copy(),
-
-    pre_word_embedding = pre_word_embedding,
-    use_char_embed = params['use_char_embed'], 
-    char_embedding_dim = params['char_embed_dim'], 
-    char_hidden_dim = params['char_hidden_dim'],
-    char2id = char2id,
-
-    device = params['device']
-  )
-
-  if params['cuda']:
-    model.to(params['device'])
-  
-  return model, params
-
-
-
+@teams_sender(webhook_url=config_parser['WEBHOOK']['teams'])
 def train_and_evaluate():
   '''
   all domains have the same label space(special case):
@@ -89,7 +35,7 @@ def train_and_evaluate():
     LSTM
   '''
 
-  model, params = prepare_model_mult_domain()
+  model, params = utils.prepare_model_mult_domain(embedding_params_dir, model_param_dir, multi_domain_config)
 
   print('=== parameters ===')
   print(params)

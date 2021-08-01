@@ -63,6 +63,61 @@ def load_model(filepath, model, optimiser=None):
   return model
 
 
+multi_domain_config = {
+  'bc': {
+    'batch_size': 64,
+    'num_of_tag': 7
+  },
+  'bn': {
+    'batch_size': 48,
+    'num_of_tag': 7
+  },
+  'mz': {
+    'batch_size': 32,
+    'num_of_tag': 7
+  },
+  'nw': {
+    'batch_size': 128,
+    'num_of_tag': 7
+  },
+  'tc': {
+    'batch_size': 48,
+    'num_of_tag': 7
+  },
+  'wb': {
+    'batch_size': 64,
+    'num_of_tag': 7
+  }
+}
+
+def prepare_model_mult_domain(embedding_params_dir, model_param_dir, multi_domain_config):
+  pre_word_embedding = np.load(os.path.join(embedding_params_dir, 'pre_word_embedding.npy'))
+  char2id = utils.read_json(os.path.join(embedding_params_dir, 'char_id.json'))
+  # tag2id = utils.read_json(os.path.join(embedding_params_dir, 'tag_id_batch.json'))
+
+  params = utils.prepare_model_params(embedding_params_dir, model_param_dir)
+
+  model = BiLSTM_CRF_Mult(
+    vocab_size = params['vocab_size'], 
+    hidden_dim = params['hidden_dim'], 
+    embedding_dim = params['word_embed_dim'], 
+    dropout = params['dropout'],
+    multi_domain_config = multi_domain_config.copy(),
+
+    pre_word_embedding = pre_word_embedding,
+    use_char_embed = params['use_char_embed'], 
+    char_embedding_dim = params['char_embed_dim'], 
+    char_hidden_dim = params['char_hidden_dim'],
+    char2id = char2id,
+
+    device = params['device']
+  )
+
+  if params['cuda']:
+    model.to(params['device'])
+  
+  return model, params
+
 
 def prepare_model_params(embedding_params_dir, model_param_dir):
   # GPU available
