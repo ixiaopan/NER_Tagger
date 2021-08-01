@@ -7,9 +7,7 @@ from utils import utils
 parser = argparse.ArgumentParser()
 parser.add_argument('--domain', default='wb', help="domain name")
 parser.add_argument('--split_type', default='test', help="train/valid/test")
-# by IQR (total sentences(including train, test, valid) from all domains)
-# [2(min), 10(Q1), 18(Q2), 29(Q3), 58(1.5IQR), 86(3IQR) ]
-parser.add_argument('--sent_len_threshold', default='5,15,25,50', help="breakpoints of sent length")
+parser.add_argument('--sent_len_threshold', default='10,30,60', help="breakpoints of sent length")
 
 
 def main(domain, split_type, sent_len_threshold):
