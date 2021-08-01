@@ -12,7 +12,7 @@ from utils import utils
 parser = argparse.ArgumentParser()
 parser.add_argument('--domain', default='wb', help="domain name")
 parser.add_argument('--split_type', default='test', help="train/valid/test")
-parser.add_argument('--freq_threshold', default='5,25,50,75,100', help="breakpoints of word freq")
+parser.add_argument('--freq_threshold', default='7,12,25,50,100', help="breakpoints of word freq")
 
 # stop = stopwords.words('english')
 def cal_word_freq(corpus):

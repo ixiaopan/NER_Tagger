@@ -80,7 +80,7 @@
 ### Feature Type
 
 ```bash
-# sent length [5, 10, 30, 60, max]
+# sent length [5, 15, 25, 50, max]
 ~ python split_by_sent_len.py --domain='bc'
 
 ~ python batch_eval_baseline.py --data_dir='./data/bc' --split_type='test_sent_5' --model_param_dir='./experiments/pool_bc'
