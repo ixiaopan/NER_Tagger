@@ -77,7 +77,7 @@ multi_domain_config = {
     'num_of_tag': 7
   },
   'nw': {
-    'batch_size': 128,
+    'batch_size': 64,
     'num_of_tag': 7
   },
   'tc': {
