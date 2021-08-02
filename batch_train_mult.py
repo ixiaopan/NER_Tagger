@@ -148,7 +148,7 @@ def train_and_evaluate():
       
       total_true_tag, total_pre_tag = clean_tags(total_true_tag, total_pre_tag)
       val_metrics = { metric: metrics[metric](total_true_tag, total_pre_tag) for metric in metrics }
-      val_metrics_str = ", ".join(("mult_valid_{}: {}").format(k, v) for k, v in summary_batch.items())
+      val_metrics_str = ", ".join(("mult_valid_{}: {}").format(k, v) for k, v in val_metrics.items())
 
       if val_metrics[best_metric] >= best_metric_score:
         best_metric_score = val_metrics[best_metric]
