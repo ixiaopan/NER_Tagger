@@ -84,7 +84,7 @@ def train_and_evaluate():
       # Sample instances in proportion to their dataset size.
       d_train_loader = utils.build_onto_dataloader(
         d_train_data_dir, 
-        split_type='train',
+        sub_dataset='train',
         embedding_params_dir=embedding_params_dir,
         batch_size=d_config['batch_size'], 
         is_cuda=params['cuda'],
@@ -146,7 +146,6 @@ def train_and_evaluate():
         total_pre_tag += d_pre_tag
         total_true_tag += d_true_tag
       
-      total_true_tag, total_pre_tag = clean_tags(total_true_tag, total_pre_tag)
       val_metrics = { metric: metrics[metric](total_true_tag, total_pre_tag) for metric in metrics }
       val_metrics_str = ", ".join(("mult_valid_{}: {}").format(k, v) for k, v in val_metrics.items())
 
@@ -186,8 +185,10 @@ def train_and_evaluate():
 
 
   # training done
+  run_time_str = 'Training time: {}'.format(time.strftime("%H:%M:%S", time.gmtime(time.time() - start_time)))
+  training_log.append(run_time_str)
   utils.save_text(os.path.join(exper_domain_dir, 'training_log.txt'), training_log)
-  print('Training time: ', time.strftime("%H:%M:%S", time.gmtime(time.time() - start_time)))
+  print(run_time_str)
 
 
 

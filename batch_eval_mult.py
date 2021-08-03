@@ -1,67 +1,48 @@
 '''
-Evaluate each domain using the baseline model
+Evaluate each domain using the multi-task model
 '''
+
 
 import os
 import argparse
 import numpy as np
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
-from sklearn.metrics import confusion_matrix as confusion_matrix_score
+from seqeval.metrics import f1_score, precision_score, recall_score, accuracy_score
 
 from utils import utils 
 from models.BiLSTM_mult import BiLSTM_CRF_Mult
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--data_dir', default='./data/toy', help="dataset to be tested")
-parser.add_argument('--split_type', default='test', help="subdataset type")
-parser.add_argument('--model_param_dir', default='./experiments/mult_private', help="Directory containing model parameters")
-
-
-def clean_tags(y_true, y_pred):
-  '''
-  y_true: (seq_n, ) python list
-  y_pre: (seq_n, ) python list
-  '''
-
-  y_true = np.array(y_true)
-  y_pred = np.array(y_pred)
-
-  # ignore 2('O')
-  mask = y_true > 0
-
-  # effective NER tags
-  y_true = y_true[mask]
-  y_pred = y_pred[mask]
-
-  return y_true, y_pred
+parser.add_argument('--data_dir', default='./data/toy', help="Directory containing the dataset to be evaluated")
+parser.add_argument('--sub_dataset', default='test', help="Which sub dataset to use")
+parser.add_argument('--model_param_dir', default='./experiments/baseline', help="Directory containing model parameters")
 
 
 def accuracy(y_true, y_pred):
-  return round(accuracy_score(y_true, y_pred)*100, 4)
-
-
-def confusion_matrix(y_true, y_pred):
-  return confusion_matrix_score(y_true, y_pred)
+  return round( accuracy_score(y_true, y_pred) * 100, 4) 
 
 
 def micro_precision(y_true, y_pred):
-  return round(precision_score(y_true, y_pred, average='micro', zero_division=0)*100, 4)
+  return round( precision_score(y_true, y_pred, average='micro', zero_division=0)  * 100, 4)
 
 
 def macro_precision(y_true, y_pred):
-  return round(precision_score(y_true, y_pred, average='macro', zero_division=0)*100, 4)
+  return round( precision_score(y_true, y_pred, average='macro', zero_division=0)* 100, 4) 
+
 
 def micro_recall(y_true, y_pred):
-  return round(recall_score(y_true, y_pred, average='micro', zero_division=0)*100, 4)
+  return round( recall_score(y_true, y_pred, average='micro', zero_division=0)* 100, 4) 
+
 
 def macro_recall(y_true, y_pred):
-  return round(recall_score(y_true, y_pred, average='macro', zero_division=0)*100, 4)
+  return round( recall_score(y_true, y_pred, average='macro', zero_division=0)* 100, 4) 
+
 
 def micro_f1(y_true, y_pred):
-  return round(f1_score(y_true, y_pred, average='micro', zero_division=0)*100, 4)
+  return round( f1_score(y_true, y_pred, average='micro', zero_division=0)* 100, 4) 
+
 
 def macro_f1(y_true, y_pred):
-  return round(f1_score(y_true, y_pred, average='macro', zero_division=0)*100, 4)
+  return round( f1_score(y_true, y_pred, average='macro', zero_division=0)* 100, 4) 
 
 
 metrics = {
@@ -71,14 +52,15 @@ metrics = {
   'micro_precision': micro_precision,
   'macro_precision': macro_precision,
   'micro_recall': micro_recall,
-  'macro_recall': macro_recall,
-  # 'confusion_matrix': confusion_matrix
+  'macro_recall': macro_recall
 }
+
+
 
 
 def evaluate_batch(
   data_dir, 
-  split_type, 
+  sub_dataset, 
   model, 
   params, 
   eval_dir,
@@ -95,13 +77,12 @@ def evaluate_batch(
 
   total_pre_tag = [] # (all words in this batch)
   total_true_tag = []  # (all words in this batch)
-  total_words = []
   summary_word_tag_pred = []
 
   for inputs, labels, char_inputs, word_len_in_batch, perm_idx, seq_len_in_batch in \
     utils.build_onto_dataloader(
       data_dir, 
-      split_type=split_type, 
+      sub_dataset=sub_dataset, 
       embedding_params_dir=embedding_params_dir,
       batch_size=params['batch_size'], 
       is_cuda=params['cuda'],
@@ -114,29 +95,35 @@ def evaluate_batch(
     pre_labels = model.crf_decode( pre_labels, from_domain=from_domain ) # return padded tag_ids
 
 
-    # for each sentence, the original text without padding
+    # for each sentence, 
     for i, length in enumerate(seq_len_in_batch):
-      total_pre_tag += pre_labels[i, :length].data.cpu().numpy().tolist()
-      total_true_tag += labels[i, :length].data.cpu().numpy().tolist()
-      total_words += inputs[i, :length].data.cpu().numpy().tolist()
+      # the original text without padding
+      pre_label_id = pre_labels[i, :length].data.cpu().numpy().tolist()
+      true_label_id = labels[i, :length].data.cpu().numpy().tolist()
+      sent_words_id = inputs[i, :length].data.cpu().numpy().tolist()
 
+      # real text
+      true_label, pred_label = [], []
+      for w_id, true_t_id, pred_t_id in zip(sent_words_id, true_label_id, pre_label_id):
+        t = id_tag[ str(true_t_id) ]
+        p = id_tag[ str(pred_t_id) ]
 
-    # step 2
-    if 'test' in split_type:
-      for w_id, true_t_id, pred_t_id in zip(total_words, total_true_tag, total_pre_tag):
-        summary_word_tag_pred.append(
-          '%15s %8s %8s' % (id_word[ str(w_id) ], id_tag[ str(true_t_id) ], id_tag[ str(pred_t_id) ])
-        )
+        true_label.append( t )
+        pred_label.append( p )
+        summary_word_tag_pred.append( '%15s %8s %8s' % (id_word[ str(w_id) ], t, p))
+
+      total_true_tag.append( true_label )
+      total_pre_tag.append( pred_label )
+
       
 
-  if 'test' in split_type:
+  if 'test' in sub_dataset:
     # log...
-    total_true_tag, total_pre_tag = clean_tags(total_true_tag, total_pre_tag)
     summary_batch = { metric: metrics[metric](total_true_tag, total_pre_tag) for metric in metrics }
-    summary_batch_str = ", ".join(("{}_{}: {}").format(split_type, k, v) for k, v in summary_batch.items())
+    summary_batch_str = ", ".join(("{}_{}: {}").format(sub_dataset, k, v) for k, v in summary_batch.items())
 
-    utils.save_text(os.path.join(eval_dir, 'eval_' + split_type + '_best_result.txt'), summary_word_tag_pred)
-    utils.save_text(os.path.join(eval_dir, 'eval_' + split_type + '_best_metric.txt'), summary_batch_str.split(', '))
+    utils.save_text(os.path.join(eval_dir, 'eval_' + sub_dataset + '_best_result.txt'), summary_word_tag_pred)
+    utils.save_text(os.path.join(eval_dir, 'eval_' + sub_dataset + '_best_metric.txt'), summary_batch_str.split(', '))
  
     return summary_batch, summary_batch_str, summary_word_tag_pred
 
@@ -148,7 +135,6 @@ def evaluate_batch(
 
 
 if __name__ == '__main__':
-  domain_type = data_dir.split('/')[-1]
   embedding_params_dir = './data/pool'
   multi_domain_config = utils.multi_domain_config.copy()
 
@@ -170,13 +156,16 @@ if __name__ == '__main__':
 
   # save logs
   print('=== Score ===')
-  
+
+  # ./data/bc => bc
+  domain_type = data_dir.split('/')[-1]
+
   test_metrics, summary_batch_str, _ = evaluate_batch(
     data_dir, 
-    args.split_type,
+    args.sub_dataset,
     model, 
     params, 
-    eval_dir = os.path.join(model_param_dir, data_dir.split('/')[-1]),
+    eval_dir = os.path.join(model_param_dir, domain_type),
     embedding_params_dir = embedding_params_dir,
     from_domain=domain_type
   )

@@ -65,7 +65,7 @@ def train_and_evaluate(
   for epoch in range(params['epoches']):
     train_loader = utils.build_onto_dataloader(
       train_data_dir, 
-      split_type='train',
+      sub_dataset='train',
       embedding_params_dir=embedding_params_dir,
       batch_size=params['batch_size'], 
       is_cuda=params['cuda'],
@@ -146,8 +146,10 @@ def train_and_evaluate(
   
 
   # training done
+  run_time_str = 'Training time: {}'.format(time.strftime("%H:%M:%S", time.gmtime(time.time() - start_time)))
+  training_log.append(run_time_str)
   utils.save_text(os.path.join(exper_domain_dir, 'training_log.txt'), training_log)
-  print('Training time: ', time.strftime("%H:%M:%S", time.gmtime(time.time() - start_time)))
+  print(run_time_str)
 
 
 if __name__ == '__main__':
