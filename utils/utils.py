@@ -303,7 +303,7 @@ def build_vocabulary(filename, word_counter=None):
     word_counter = Counter()
   
   with open(filename) as f:
-    for i, line in enumerate(f.read().split('\n')):
+    for i, line in enumerate(f.read(encoding="utf8").split('\n')):
       word_counter.update(line.split(' '))
 
   return word_counter, i + 1
@@ -325,7 +325,7 @@ def build_char(filename, char_counter=None):
     char_counter = Counter()
   
   with open(filename) as f:
-    chars = ''.join([''.join(line) for line in f.read().split('\n')])
+    chars = ''.join([''.join(line) for line in f.read(encoding="utf8").split('\n')])
   
   char_counter.update(chars)
 
@@ -606,14 +606,14 @@ def build_onto_dataloader(
   # Step 1
   sentences, tags = [], []
   with open(path.join(data_dir, sub_dataset, 'sentences.txt'), encoding="utf8") as f:
-    for line in f.read().split('\n'): # for each line
+    for line in f.read(encoding="utf8").split('\n'): # for each line
       sent = [ word_id[w] if w in word_id else word_id[UNK_WORD] 
           for w in line.split() ]
       sentences.append(sent)
 
 
   with open(path.join(data_dir, sub_dataset, 'labels.txt'), encoding="utf8") as f:
-    for line in f.read().split('\n'): # for each line
+    for line in f.read(encoding="utf8").split('\n'): # for each line
       tag_line = [ tag_id[t] for t in line.split() ]
       tags.append(tag_line)
 
