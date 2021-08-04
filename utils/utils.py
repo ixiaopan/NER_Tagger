@@ -524,7 +524,7 @@ def build_ner_profile(
 
   # save pre-trained word vector
   if use_pre_trained and glove_word_dim:
-    pre_word_vector = np.zeros((len(vocab), glove_word_dim))
+    pre_word_vector = np.random.rand(len(vocab), glove_word_dim)
     for w in vocab:
       if w in glove_words.keys():
         pre_word_vector[word_id[w]] = glove_words[w]
