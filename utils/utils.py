@@ -491,8 +491,8 @@ def build_ner_profile(
   # step 3
   # for option 1, if min_word_freq>1, this will remove many GloVe words that are not presented in the corpus
   # for now, we only consider option 2
-  vocab = [ w for w, c in split['train_word_counter'].items() if c >= min_word_freq ]
-  
+  vocab = [ w.lower() for w, c in split['train_word_counter'].items() if c >= min_word_freq ]
+
 
   # for batch version
   tags_batch = [ t for t, c in tag_counter.items() if c >= min_tag_freq ]
@@ -538,9 +538,7 @@ def build_ner_profile(
       if w in glove_words.keys():
         pre_word_vector[word_id[w]] = glove_words[w]
 
-      elif w.lower() in glove_words.keys():
-        pre_word_vector[word_id[w]] = glove_words[w.lower()]
-
+ 
 
   # step 4 save meta data to file
   save_text(path.join(data_dir, 'vocabulary.txt'), vocab)
@@ -617,8 +615,7 @@ def build_onto_dataloader(
   with open(path.join(data_dir, sub_dataset, 'sentences.txt'), encoding="utf8") as f:
     for line in f: # for each line
       line = line.rstrip()
-      # sent = [ word_id[w] if w in word_id else word_id[UNK_WORD] for w in line.split() ]
-      sent = [ w for w in line.split() ] # real word string => we should do character embedding, otherwise all unknow words are encoded as '_UNK_'
+      sent = [ w.lower() for w in line.split() ] # real word string => we should do character embedding, otherwise all unknow words are encoded as '_UNK_'
       sentences.append(sent)
 
 
