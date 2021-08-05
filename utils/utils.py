@@ -612,18 +612,16 @@ def build_onto_dataloader(
   # Step 1
   sentences, tags = [], []
   with open(path.join(data_dir, sub_dataset, 'sentences.txt'), encoding="utf8") as f:
-    # for line in f.read().split('\n'): # for each line
     for line in f: # for each line
       line = line.rstrip()
-      sent = [ word_id[w] if w in word_id else word_id[UNK_WORD] 
-          for w in line.split() ]
+      # sent = [ word_id[w] if w in word_id else word_id[UNK_WORD] for w in line.split() ]
+      sent = [ w for w in line.split() ] # real word string => we should do character embedding, otherwise all unknow words are encoded as '_UNK_'
       sentences.append(sent)
 
 
   with open(path.join(data_dir, sub_dataset, 'labels.txt'), encoding="utf8") as f:
-    # for line in f.read().split('\n'): # for each line
     for line in f: # for each line
-      tag_line = [ tag_id[t] for t in line.split() ]
+      tag_line = [ tag_id[t] for t in line.split() ] # lable id
       tags.append(tag_line)
 
 
@@ -660,6 +658,27 @@ def build_onto_dataloader(
     batch_tags = [ tags[idx] for idx in batch_idx ]
 
 
+    # Step 3.2 encode characters for each word in batch
+    # (\sum_i^batch_size |seq_len|, variable_word_len)
+    # [
+    #   [6, 9, 8, 4, 1, 11, 12, 10], # 8 # each word
+    #   [12, 5, 8, 14], # 4
+    #   [7, 3, 2, 5, 13, 7] # 6
+    #   ...
+    # ]
+    batch_chars = []
+    for sent in batch_sentences:
+      for w_str in sent: # each sentence
+        w_seq = []
+        for s in w_str: # each word
+          if s in char_id:
+            w_seq.append(char_id[s])
+          else:
+            w_seq.append(char_id[UNK_WORD])
+        batch_chars.append(w_seq)
+
+    
+
     # Step 3.1 padding sentence
     # refer: https://github.com/cs230-stanford/cs230-code-examples/blob/master/pytorch/nlp/model/data_loader.py
     batch_max_len = max([len(s) for s in batch_sentences])
@@ -675,33 +694,15 @@ def build_onto_dataloader(
     # ]
     for j in range(len(batch_sentences)):
       cur_idx = len(batch_sentences[j])
-      batch_data[j][:cur_idx] = batch_sentences[j]
+      # batch_data[j][:cur_idx] = batch_sentences[j]
+      batch_data[j][:cur_idx] = [ word_id[w_str] if w_str in word_id else word_id[UNK_WORD] for w_str in batch_sentences[j] ]
       batch_labels[j][:cur_idx] = batch_tags[j]
 
 
 
-    # Step 3.2 encode characters for each word in batch
-    # (batch_size*max_seq_len, variable_word_len)
-    # [
-    #   [6, 9, 8, 4, 1, 11, 12, 10], # 8
-    #   [12, 5, 8, 14], # 4
-    #   [7, 3, 2, 5, 13, 7] # 6
-    #   ...
-    # ]
-    batch_chars = []
-    for sent in batch_data:
-      for w_id in sent:
-        w_seq = []
-        for s in id_word[str(w_id)]:
-          if s in char_id:
-            w_seq.append(char_id[s])
-          else:
-            w_seq.append(char_id[UNK_WORD])
-        batch_chars.append(w_seq)
-
 
     # Step 3.2.1, calculate the max length of a word, [8, 4, 6]
-    # (batch_size*max_seq_len,)
+    # (\sum_i^batch_size |seq_len|, )
     word_len_in_batch = torch.LongTensor( [ len(s) for s in batch_chars ])
     max_word_len_in_batch = word_len_in_batch.max() # 8
 
