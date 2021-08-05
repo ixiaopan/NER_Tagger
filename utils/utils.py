@@ -287,7 +287,7 @@ def split_train_val_test(corpus, corpus_tag, shuffle=True):
 
 
 
-def build_vocabulary(filename, word_counter=None):
+def build_vocabulary(filename, word_counter=None, lower=True):
   '''
   corpus: a list of sentence
   [
@@ -308,7 +308,10 @@ def build_vocabulary(filename, word_counter=None):
     for line in f: # for each line
       i += 1
       line = line.rstrip()
-      word_counter.update(line.split(' '))
+      if lower:
+        word_counter.update(line.lower().split(' '))
+      else:
+        word_counter.update(line.split(' '))
 
   # return word_counter, i + 1
   return word_counter, i
@@ -465,7 +468,7 @@ def build_ner_profile(
 
   tag_counter = Counter()
   for name in ['train', 'valid', 'test']:
-    tag_counter, tag_sent_len = build_vocabulary(path.join(data_dir, name, 'labels.txt'), tag_counter)
+    tag_counter, tag_sent_len = build_vocabulary(path.join(data_dir, name, 'labels.txt'), tag_counter, lower=False)
     data_statistics[name + '_label_size'] = tag_sent_len
 
 
@@ -491,7 +494,7 @@ def build_ner_profile(
   # step 3
   # for option 1, if min_word_freq>1, this will remove many GloVe words that are not presented in the corpus
   # for now, we only consider option 2
-  vocab = [ w.lower() for w, c in split['train_word_counter'].items() if c >= min_word_freq ]
+  vocab = [ w for w, c in split['train_word_counter'].items() if c >= min_word_freq ]
 
 
   # for batch version
