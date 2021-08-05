@@ -363,7 +363,7 @@ class BiLSTM_CRF_Batch(nn.Module):
 
       # (batch_size, max_seq_len, char_hidden_dim)
       max_seq_len = embed_words.shape[1]
-      concat_char_embed_expand = torch.zeros_like(embed_words.shape[0], max_seq_len, concat_char_embed.shape[1]) # for padding word, use zero vector
+      concat_char_embed_expand = torch.zeros(( embed_words.shape[0], max_seq_len, concat_char_embed.shape[1] ), dtype=torch.float) # for padding word, use zero vector
       prev_seq_len = 0
       for i, seq_len in enumerate(seq_len_in_batch): # each sentence
         flat_char_embedding = torch.zeros(( max_seq_len, concat_char_embed.shape[1] ), dtype=torch.float)
