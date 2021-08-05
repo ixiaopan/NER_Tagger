@@ -367,8 +367,11 @@ class BiLSTM_CRF_Batch(nn.Module):
       prev_seq_len = 0
       for i, seq_len in enumerate(seq_len_in_batch): # each sentence
         flat_char_embedding = torch.zeros(( max_seq_len, concat_char_embed.shape[1] ), dtype=torch.float)
-        flat_char_embedding[seq_len] = concat_char_embed[prev_seq_len:prev_seq_len+seq_len]
+
+        flat_char_embedding[:seq_len, :] = concat_char_embed[prev_seq_len:prev_seq_len+seq_len]
+
         concat_char_embed_expand[i] = flat_char_embedding
+
         prev_seq_len += seq_len
 
       # concat_char_embed_expand = concat_char_embed.reshape(embed_words.shape[0], -1, concat_char_embed.shape[1])
