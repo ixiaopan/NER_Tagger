@@ -700,7 +700,7 @@ def build_onto_dataloader(
         else:
           w_seq = []
           for s in w_str: # each charac
-            elif s in char_id:
+            if s in char_id:
               w_seq.append(char_id[s])
             else:
               w_seq.append(char_id[UNK_WORD])
