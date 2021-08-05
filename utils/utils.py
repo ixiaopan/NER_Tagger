@@ -665,7 +665,7 @@ def build_onto_dataloader(
     seq_len_in_batch = [ len(s) for s in batch_sentences]
 
     # (batch_size, max_seq_len)
-    batch_data_str = PAD_WORD * np.ones(( len(batch_sentences), batch_max_len ))
+    batch_data_str = PAD_WORD * np.ones(( len(batch_sentences), batch_max_len ), dtype=object)
     batch_data = word_id[PAD_WORD] * np.ones(( len(batch_sentences), batch_max_len ), dtype=int)
     batch_labels = 0 * np.ones((len(batch_sentences), batch_max_len), dtype=int)
     # (batch_size, max_seq_len)
