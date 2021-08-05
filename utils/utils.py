@@ -659,33 +659,13 @@ def build_onto_dataloader(
     batch_tags = [ tags[idx] for idx in batch_idx ]
 
 
-    # Step 3.2 encode characters for each word in batch
-    # (\sum_i^batch_size |seq_len|, variable_word_len)
-    # [
-    #   [6, 9, 8, 4, 1, 11, 12, 10], # 8 # each word
-    #   [12, 5, 8, 14], # 4
-    #   [7, 3, 2, 5, 13, 7] # 6
-    #   ...
-    # ]
-    batch_chars = []
-    for sent in batch_sentences:
-      for w_str in sent: # each sentence
-        w_seq = []
-        for s in w_str: # each word
-          if s in char_id:
-            w_seq.append(char_id[s])
-          else:
-            w_seq.append(char_id[UNK_WORD])
-        batch_chars.append(w_seq)
-
-    
-
     # Step 3.1 padding sentence
     # refer: https://github.com/cs230-stanford/cs230-code-examples/blob/master/pytorch/nlp/model/data_loader.py
     batch_max_len = max([len(s) for s in batch_sentences])
     seq_len_in_batch = [ len(s) for s in batch_sentences]
 
     # (batch_size, max_seq_len)
+    batch_data_str = PAD_WORD * np.ones(( len(batch_sentences), batch_max_len ), dtype=str)
     batch_data = word_id[PAD_WORD] * np.ones(( len(batch_sentences), batch_max_len ), dtype=int)
     batch_labels = 0 * np.ones((len(batch_sentences), batch_max_len), dtype=int)
     # (batch_size, max_seq_len)
@@ -695,11 +675,38 @@ def build_onto_dataloader(
     # ]
     for j in range(len(batch_sentences)):
       cur_idx = len(batch_sentences[j])
-      # batch_data[j][:cur_idx] = batch_sentences[j]
+
+      batch_data_str[j][:cur_idx] = batch_sentences[j]
+
       batch_data[j][:cur_idx] = [ word_id[w_str] if w_str in word_id else word_id[UNK_WORD] for w_str in batch_sentences[j] ]
+
       batch_labels[j][:cur_idx] = batch_tags[j]
 
 
+
+    # Step 3.2 encode characters for each word in batch
+    # (\sum_i^batch_size |seq_len|, variable_word_len)
+    # [
+    #   [6, 9, 8, 4, 1, 11, 12, 10], # 8 # each word
+    #   [12, 5, 8, 14], # 4
+    #   [7, 3, 2, 5, 13, 7] # 6
+    #   ...
+    # ]
+    batch_chars = []
+    for sent in batch_data_str: # each sentence
+      for w_str in sent: # each word
+        if w_str == PAD_WORD:
+          batch_chars.append([ char_id[PAD_WORD] ])
+        else:
+          w_seq = []
+          for s in w_str: # each charac
+            elif s in char_id:
+              w_seq.append(char_id[s])
+            else:
+              w_seq.append(char_id[UNK_WORD])
+          batch_chars.append(w_seq)
+
+    
 
 
     # Step 3.2.1, calculate the max length of a word, [8, 4, 6]
