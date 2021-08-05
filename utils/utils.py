@@ -303,8 +303,7 @@ def build_vocabulary(filename, word_counter=None, lower=True):
     word_counter = Counter()
   
   i = 0
-  with open(filename) as f:
-    # for line in f.read().split('\n'): # for each line
+  with open(filename, 'r', encoding="utf-8") as f:
     for line in f: # for each line
       i += 1
       line = line.rstrip()
@@ -332,8 +331,7 @@ def build_char(filename, char_counter=None):
   if char_counter is None:
     char_counter = Counter()
   
-  with open(filename) as f:
-    # chars = ''.join([''.join(line) for line in f.read().split('\n')])
+  with open(filename, 'r', encoding="utf-8") as f:
     chars = ''.join([''.join(line.rstrip()) for line in f])
 
   char_counter.update(chars)
