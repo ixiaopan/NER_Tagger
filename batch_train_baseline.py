@@ -83,7 +83,7 @@ def train_and_evaluate(
       perm_idx: (batch_size*max_seq_len, )
       '''
 
-      pred_y = model( inputs, char_inputs, word_len_in_batch, perm_idx )
+      pred_y = model( inputs, char_inputs, word_len_in_batch, perm_idx, seq_len_in_batch )
       loss = model.crf_loss(pred_y, labels)
 
       optimiser.zero_grad()

@@ -80,7 +80,7 @@ def evaluate_batch(data_dir, sub_dataset, model, params, eval_dir, embedding_par
     ):
 
     # step 1 prediction
-    pre_labels = model( inputs, char_inputs, word_len_in_batch, perm_idx )
+    pre_labels = model( inputs, char_inputs, word_len_in_batch, perm_idx, seq_len_in_batch )
     pre_labels = model.crf_decode( pre_labels ) # return padded tag_ids
 
     # for each sentence, 

@@ -665,7 +665,6 @@ def build_onto_dataloader(
     seq_len_in_batch = [ len(s) for s in batch_sentences]
 
     # (batch_size, max_seq_len)
-    batch_data_str = PAD_WORD * np.ones(( len(batch_sentences), batch_max_len ), dtype=object)
     batch_data = word_id[PAD_WORD] * np.ones(( len(batch_sentences), batch_max_len ), dtype=int)
     batch_labels = 0 * np.ones((len(batch_sentences), batch_max_len), dtype=int)
     # (batch_size, max_seq_len)
@@ -675,11 +674,7 @@ def build_onto_dataloader(
     # ]
     for j in range(len(batch_sentences)):
       cur_idx = len(batch_sentences[j])
-
-      batch_data_str[j][:cur_idx] = batch_sentences[j]
-
       batch_data[j][:cur_idx] = [ word_id[w_str] if w_str in word_id else word_id[UNK_WORD] for w_str in batch_sentences[j] ]
-
       batch_labels[j][:cur_idx] = batch_tags[j]
 
 
@@ -693,18 +688,16 @@ def build_onto_dataloader(
     #   ...
     # ]
     batch_chars = []
-    for sent in batch_data_str: # each sentence
+    for sent in batch_sentences: # each sentence
       for w_str in sent: # each word
-        if w_str == PAD_WORD:
-          batch_chars.append([ char_id[PAD_WORD] ])
-        else:
-          w_seq = []
-          for s in w_str: # each charac
-            if s in char_id:
-              w_seq.append(char_id[s])
-            else:
-              w_seq.append(char_id[UNK_WORD])
-          batch_chars.append(w_seq)
+        w_seq = []
+        for s in w_str: # each charac
+          if s in char_id:
+            w_seq.append(char_id[s])
+          else:
+            w_seq.append(char_id[UNK_WORD])
+        batch_chars.append(w_seq)
+        
 
     
 
