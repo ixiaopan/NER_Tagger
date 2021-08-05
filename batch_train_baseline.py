@@ -74,7 +74,7 @@ def train_and_evaluate(
 
     train_loss_per_epoch = []
 
-    for inputs, labels, char_inputs, word_len_in_batch, perm_idx, _ in train_loader:
+    for inputs, labels, char_inputs, word_len_in_batch, perm_idx, seq_len_in_batch in train_loader:
       '''
       inputs: (batch_size, max_seq_len)
       labels: (batch_size, max_seq_len)
