@@ -492,10 +492,7 @@ def build_ner_profile(
   # for option 1, if min_word_freq>1, this will remove many GloVe words that are not presented in the corpus
   # for now, we only consider option 2
   vocab = [ w for w, c in split['train_word_counter'].items() if c >= min_word_freq ]
-  if PAD_WORD not in vocab:
-    vocab.insert(0, PAD_WORD)
-  if UNK_WORD not in vocab:
-    vocab.insert(0, UNK_WORD)
+  
 
   # for batch version
   tags_batch = [ t for t, c in tag_counter.items() if c >= min_tag_freq ]
@@ -505,8 +502,14 @@ def build_ner_profile(
   tags.insert(0, STOP_TAG)
 
   chars = list(set([ s for w in vocab for s in w ]))
+ 
   chars.insert(0, PAD_WORD)
   chars.insert(0, UNK_WORD)
+
+  if PAD_WORD not in vocab:
+    vocab.insert(0, PAD_WORD)
+  if UNK_WORD not in vocab:
+    vocab.insert(0, UNK_WORD)
 
   data_statistics['vocab_size'] = len(vocab)
   data_statistics['tag_size'] = len(tags)
