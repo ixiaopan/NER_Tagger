@@ -14,7 +14,7 @@ from models.BiLSTM_mult import BiLSTM_CRF_Mult
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir', default='./data/toy', help="Directory containing the dataset to be evaluated")
 parser.add_argument('--sub_dataset', default='test', help="Which sub dataset to use")
-parser.add_argument('--model_param_dir', default='./experiments/baseline', help="Directory containing model parameters")
+parser.add_argument('--model_param_dir', default='./experiments/mult_private', help="Directory containing model parameters")
 
 
 def accuracy(y_true, y_pred):

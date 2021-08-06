@@ -99,7 +99,7 @@
 ```bash
 ~ python batch_train_mult.py
 
-~ python batch_eval_mult.py --data_dir='./data/toy' --split_type='test
+~ python batch_eval_mult.py --data_dir='./data/bc' --sub_dataset='test'
 ```
 
 

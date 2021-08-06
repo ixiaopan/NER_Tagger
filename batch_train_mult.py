@@ -11,7 +11,7 @@ from configparser import ConfigParser
 
 from utils import utils
 from models.BiLSTM_mult import BiLSTM_CRF_Mult
-from batch_eval_mult import evaluate_batch, clean_tags,metrics
+from batch_eval_mult import evaluate_batch, metrics
 
 config_parser = ConfigParser()
 config_parser.read('config.ini')
