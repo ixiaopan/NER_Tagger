@@ -310,7 +310,7 @@ class BiLSTM_CRF_Mult(nn.Module):
     return getattr(self, domain + '_' + layer_name)
 
 
-  def forward(self, inputs, input_chars=None, word_len_per_sent=None, perm_idx=None, from_domain=None):
+  def forward(self, inputs, input_chars=None, word_len_per_sent=None, perm_idx=None, from_domain=None, seq_len_in_batch=None):
     '''
       inputs(after padding):
         - (batch_size, max_seq_len) 
@@ -365,8 +365,15 @@ class BiLSTM_CRF_Mult(nn.Module):
     if self.use_char_embed:
       # (batch_size, max_seq_len, embed_dim)
       embed_words = self.word_embed(inputs)
+     
       # (batch_size, max_seq_len, char_hidden_dim)
-      concat_char_embed_expand = concat_char_embed.reshape(embed_words.shape[0], -1, concat_char_embed.shape[1])
+      # for padding word, use zero vector
+      concat_char_embed_expand = torch.zeros(( embed_words.shape[0], embed_words.shape[1], concat_char_embed.shape[1] ), dtype=torch.float).to(self.device)
+      prev_seq_len = 0
+      for i, seq_len in enumerate(seq_len_in_batch): # each sentence
+        concat_char_embed_expand[i, :seq_len, :] = concat_char_embed[prev_seq_len:prev_seq_len+seq_len]
+        prev_seq_len += seq_len
+      # concat_char_embed_expand = concat_char_embed.reshape(embed_words.shape[0], -1, concat_char_embed.shape[1])
 
       total_embeds = torch.cat((embed_words, concat_char_embed_expand), -1)
 

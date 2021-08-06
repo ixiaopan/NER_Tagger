@@ -101,7 +101,7 @@ def train_and_evaluate():
       for d in multi_domain_config.keys():
         d_config = multi_domain_config[d]
 
-        inputs, labels, char_inputs, word_len_in_batch, perm_idx, _ = next(d_config['train_loader'])
+        inputs, labels, char_inputs, word_len_in_batch, perm_idx, seq_len_in_batch = next(d_config['train_loader'])
 
         '''
         inputs: (batch_size, max_seq_len)
@@ -110,7 +110,7 @@ def train_and_evaluate():
         word_len_in_batch: (batch_size*max_seq_len, )
         perm_idx: (batch_size*max_seq_len, )
         '''
-        pred_y = model( inputs, char_inputs, word_len_in_batch, perm_idx, from_domain=d )
+        pred_y = model( inputs, char_inputs, word_len_in_batch, perm_idx, from_domain=d, seq_len_in_batch=seq_len_in_batch )
         loss = model.crf_loss(pred_y, labels, from_domain=d)
         
         loss_all_domains_iter.append(loss)
