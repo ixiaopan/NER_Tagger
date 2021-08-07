@@ -54,13 +54,11 @@
 ### Baseline
 
 ```bash
-
-~ sh baseline.sh toy
+~ sh baseline.sh 'bc'
 
 # or step train_eval
-~ python batch_train_baseline.py --train_data_dir='./data/toy'
-
-~ python batch_eval_baseline.py --data_dir='./data/toy'
+~ python batch_train_baseline.py --train_data_dir='./data/bc'
+~ python batch_eval_baseline.py --data_dir='./data/bc'
 ```
 
 
@@ -68,14 +66,24 @@
 ```bash
 # data pooling aggregated data from all domains
 ~ python batch_train_baseline.py --train_data_dir='./data/pool' --model_param_dir='./experiments/pool'
-
 ~ python batch_eval_baseline.py --data_dir='./data/tc' --model_param_dir='./experiments/pool'
 
 # data pooling aggregated data from leave-one-domain-out domains
 ~ python batch_train_baseline.py --train_data_dir='./data/pool_bc' --model_param_dir='./experiments/pool_bc'
-
 ~ python batch_eval_baseline.py --data_dir='./data/bc' --model_param_dir='./experiments/pool_bc'
 ```
+
+
+### Multi-Shared CRF
+
+```bash
+~ sh mult_private.sh
+
+# or step train_eval
+~ python batch_train_mult.py
+~ python batch_eval_mult.py --data_dir='./data/bc' --sub_dataset='test'
+```
+
 
 ### Feature Type
 
@@ -94,23 +102,6 @@
 ~ python batch_eval_baseline.py --data_dir='./data/bc' --split_type='test_rare_7' --model_param_dir='./experiments/pool_bc'
 ```
 
-### Multi-Shared CRF
-
-```bash
-~ python batch_train_mult.py
-
-~ python batch_eval_mult.py --data_dir='./data/bc' --sub_dataset='test'
-```
-
-
-
-### Pool-Init
-
-```bash
-~ python batch_train_pool_init.py --model_param_dir='./experiments/pool_init'
-
-~ python batch_eval_baseline.py --data_dir='./data/tc' --model_param_dir='./experiments/pool_init'
-```
 
 
 ## References

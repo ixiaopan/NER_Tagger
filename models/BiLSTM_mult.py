@@ -281,23 +281,24 @@ class BiLSTM_CRF_Mult(nn.Module):
       self.lstm = nn.LSTM(embedding_dim, hidden_dim // 2, num_layers = 1, bidirectional=True, batch_first=True)
     self.init_lstm(self.lstm)
 
+    # well, all domains have the same label sets... should be constant = 7, too lazy to modify again
+    self.fc = nn.Linear(hidden_dim, multi_domain_config['bc']['num_of_tag'])
+    self.init_linear()
+
+
     # private layer - context layer, crf
     for d in multi_domain_config.keys():
-      d_config = multi_domain_config[d]
-     
-      d_fc_name = d + '_fc'
       d_crf_name = d + '_crf'
-      d_num_of_tag = d_config['num_of_tag']
-
-      setattr(self, d_fc_name, nn.Linear(hidden_dim, d_num_of_tag))
-      d_fc = self._get_domain_layer(d, 'fc')
-      
-      init.xavier_normal_(d_fc.weight.data)
-      init.normal_(d_fc.bias.data)
-
+      d_num_of_tag = multi_domain_config[d]['num_of_tag']
       setattr(self, d_crf_name, CRF(d_num_of_tag))
 
-  
+
+
+  def init_linear(self):
+    init.xavier_normal_(self.fc.weight.data)
+    init.normal_(self.fc.bias.data)
+
+
   def init_lstm(self, lstm):
     for param in lstm.parameters():
       if len(param.shape) >= 2:
@@ -392,8 +393,7 @@ class BiLSTM_CRF_Mult(nn.Module):
     lstm_out = self.dropout(lstm_out)
 
     # (batch_size, max_seq_len, num_of_tag)
-    d_fc = self._get_domain_layer(from_domain, 'fc')
-    lstm_feats = d_fc(lstm_out)
+    lstm_feats = self.fc(lstm_out)
 
     return lstm_feats
 
