@@ -6,6 +6,7 @@ import os
 import argparse
 import numpy as np
 from seqeval.metrics import f1_score, precision_score, recall_score, accuracy_score
+from seqeval.scheme import IOB2
 
 from utils import utils 
 from models.BiLSTM_batch import BiLSTM_CRF_Batch
@@ -22,27 +23,27 @@ def accuracy(y_true, y_pred):
 
 
 def micro_precision(y_true, y_pred):
-  return round( precision_score(y_true, y_pred, average='micro', zero_division=0)  * 100, 4)
+  return round( precision_score(y_true, y_pred, average='micro', zero_division=0, mode='strict', scheme=IOB2)  * 100, 4)
 
 
 def macro_precision(y_true, y_pred):
-  return round( precision_score(y_true, y_pred, average='macro', zero_division=0)* 100, 4) 
+  return round( precision_score(y_true, y_pred, average='macro', zero_division=0, mode='strict', scheme=IOB2)* 100, 4) 
 
 
 def micro_recall(y_true, y_pred):
-  return round( recall_score(y_true, y_pred, average='micro', zero_division=0)* 100, 4) 
+  return round( recall_score(y_true, y_pred, average='micro', zero_division=0, mode='strict', scheme=IOB2)* 100, 4) 
 
 
 def macro_recall(y_true, y_pred):
-  return round( recall_score(y_true, y_pred, average='macro', zero_division=0)* 100, 4) 
+  return round( recall_score(y_true, y_pred, average='macro', zero_division=0, mode='strict', scheme=IOB2)* 100, 4) 
 
 
 def micro_f1(y_true, y_pred):
-  return round( f1_score(y_true, y_pred, average='micro', zero_division=0)* 100, 4) 
+  return round( f1_score(y_true, y_pred, average='micro', zero_division=0, mode='strict', scheme=IOB2)* 100, 4) 
 
 
 def macro_f1(y_true, y_pred):
-  return round( f1_score(y_true, y_pred, average='macro', zero_division=0)* 100, 4) 
+  return round( f1_score(y_true, y_pred, average='macro', zero_division=0, mode='strict', scheme=IOB2)* 100, 4) 
 
 
 metrics = {

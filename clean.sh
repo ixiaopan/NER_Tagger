@@ -21,9 +21,9 @@ python build_onto_profile.py --data_dir='./data/pool'
 # leave one domain out
 python split_pool_loov.py
 
-python build_onto_profile.py --data_dir='./data/pool_bc' --dataset='train,test'
-python build_onto_profile.py --data_dir='./data/pool_bn' --dataset='train,test'
-python build_onto_profile.py --data_dir='./data/pool_mz' --dataset='train,test'
-python build_onto_profile.py --data_dir='./data/pool_nw' --dataset='train,test'
-python build_onto_profile.py --data_dir='./data/pool_tc' --dataset='train,test'
-python build_onto_profile.py --data_dir='./data/pool_wb' --dataset='train,test'
+python build_onto_profile.py --data_dir='./data/pool_bc' --dataset='train,valid'
+python build_onto_profile.py --data_dir='./data/pool_bn' --dataset='train,valid'
+python build_onto_profile.py --data_dir='./data/pool_mz' --dataset='train,valid'
+python build_onto_profile.py --data_dir='./data/pool_nw' --dataset='train,valid'
+python build_onto_profile.py --data_dir='./data/pool_tc' --dataset='train,valid'
+python build_onto_profile.py --data_dir='./data/pool_wb' --dataset='train,valid'
