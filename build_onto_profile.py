@@ -12,6 +12,7 @@ parser.add_argument('--min_word_freq', default=1, help="The minimum frequency of
 parser.add_argument('--use_char_embed', default=True, action='store_true', help="Character-level embedding")
 parser.add_argument('--use_pre_trained', default=True, action='store_true', help="Whether to use pre-trained word embedding")
 parser.add_argument('--glove_word_dim', default=300, help="The dimension of GloVe word vector")
+parser.add_argument('--dataset', default='train,valid,test', help="subdataset")
 
 
 if __name__ == '__main__':
@@ -23,4 +24,5 @@ if __name__ == '__main__':
     use_char_embed=args.use_char_embed,
     use_pre_trained=args.use_pre_trained,
     glove_word_dim=int(args.glove_word_dim),
+    dataset=args.dataset.split(',')
   )

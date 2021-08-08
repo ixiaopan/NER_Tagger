@@ -11,6 +11,6 @@
   "hidden_dim": 256,
   "word_embed_dim": 300, 
 
-  "char_embed_dim": 25,
+  "char_embed_dim": 32,
   "char_hidden_dim": 64
 }

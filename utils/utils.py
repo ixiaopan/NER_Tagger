@@ -417,6 +417,7 @@ def build_ner_profile(
   use_pre_trained=False,
   glove_word_dim=50,  # 50, 100, 200, 300
   min_tag_freq=1,
+  dataset=['train', 'valid', 'test']
 ):
   '''
   build the vocabulary of a set of data & pre-load the pre-trained word embedding
@@ -458,20 +459,20 @@ def build_ner_profile(
   
   # step 1
   split = {}
-  for name in ['train', 'valid', 'test']:
+  for name in dataset:
     word_counter, sent_len = build_vocabulary(path.join(data_dir, name, 'sentences.txt'))
     split[name + '_word_counter'] = word_counter
     data_statistics[name + '_sent_size'] = sent_len
 
 
   tag_counter = Counter()
-  for name in ['train', 'valid', 'test']:
+  for name in dataset:
     tag_counter, tag_sent_len = build_vocabulary(path.join(data_dir, name, 'labels.txt'), tag_counter, lower=False)
     data_statistics[name + '_label_size'] = tag_sent_len
 
 
   # should have the same number of lines
-  for name in ['train', 'valid', 'test']:
+  for name in dataset:
     assert data_statistics[name + '_sent_size'] == data_statistics[name + '_label_size']
 
 

@@ -64,11 +64,9 @@
 
 ### Pool
 ```bash
-# data pooling aggregated data from all domains
-~ python batch_train_baseline.py --train_data_dir='./data/pool' --model_param_dir='./experiments/pool'
-~ python batch_eval_baseline.py --data_dir='./data/tc' --model_param_dir='./experiments/pool'
+~ sh pool.sh 'bc'
 
-# data pooling aggregated data from leave-one-domain-out domains
+# or step train_eval, data pooling aggregated data from leave-one-domain-out domains
 ~ python batch_train_baseline.py --train_data_dir='./data/pool_bc' --model_param_dir='./experiments/pool_bc'
 ~ python batch_eval_baseline.py --data_dir='./data/bc' --model_param_dir='./experiments/pool_bc'
 ```
