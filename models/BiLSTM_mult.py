@@ -10,225 +10,7 @@ import torch.nn as nn
 from torch.nn import init
 import numpy as np
 import torch.optim as optim
-
-class CRF(nn.Module):
-  def __init__(self, num_of_tag):
-    super(CRF, self).__init__()
-    
-    self.num_of_tag = num_of_tag
-    # T_{ij} transfer from i to j,
-    self.transitionMatrix = nn.Parameter(torch.randn(num_of_tag, num_of_tag))
-    self.start_transitions = nn.Parameter(torch.randn(num_of_tag))
-    self.stop_transitions = nn.Parameter(torch.randn(num_of_tag))
-
-  
-  def _log_sum_exp(self, vec, dim):
-    '''
-    vec: (m, n)
-    max_val: (n, ) => (1, n) if dim=0
-    
-    @return
-      (n,)
-    '''
-    max_val, _ = vec.max(dim)
-
-    return max_val + (vec - max_val.unsqueeze(dim)).exp().sum(dim).log()
-
-
-  def loss(self, feats, tags):
-    """
-    feats: 
-      - (batch_size, max_seq_len, num_of_tag)
-    tags: 
-      - (batch_size, max_seq_len) Should be between 0 and num_tags
-    """
-    # Shape checks
-    assert len(feats.shape) == 3
-    assert len(tags.shape) == 2
-    assert feats.shape[:2] == tags.shape
-
-    sequence_score = self._sequence_score(feats, tags)
-
-    partition_function = self._partition_function(feats)
-
-    log_probability = sequence_score - partition_function
-
-    # Average across batch
-    return -log_probability.mean()
-
-  
-  def _sequence_score(self, feats, tags):
-      """
-      feats: 
-        - (batch_size, max_seq_len, num_of_tag)
-        [
-          [
-                   O   B   I
-            [ w10 0.1 0.2 0.7 ]
-            [ w11 0.2 0.4 0.4 ]
-            ...
-          ]
-
-          [
-                  O   B   I
-            [ w20 0.1 0.2 0.7 ]
-            [ w21 0.2 0.4 0.4 ]
-            ...
-          ]
-        ]
-      tags: 
-        - (batch_size, max_seq_len) Should be between 0 and num_tags
-          [ 
-            [ w10=>B, w11=>I, ...]  
-
-            [ w20=>B, w21=>O, ...] 
-            ...
-          ]
-
-      @return
-        - (batch_size, )
-      """
-      batch_size = feats.shape[0]
-
-      # first, select the right tag for each word
-      #   (batch_size, max_seq_len, num_of_tag) gather (batch_size, max_seq_len, 1)
-    
-      # then, returns a tensor with all the dimensions of input of size 1 removed.
-      #   (batch_size, max_seq_len, 1) =>  (batch_size, max_seq_len) 
-    
-      # finnaly, we get emission score for each sentence in this batch
-      #   (batch_size, )
-
-      feat_score = feats.gather(2, tags.unsqueeze(-1)).squeeze(-1).sum(dim=-1)
-      # print(feat_score.size())
-
-
-      # transition matrix
-      # [
-      #   [ [w11, w12], [w12, w13], [w13, w14], ... [w_1n-1, w1n] ],
-      #   [ [w21, w22], [w22, w23], [w23, w24], ... [w_2n-1, w2n] ],
-      # ]
-      tags_pairs = tags.unfold(1, 2, 1)
-
-      # Use advanced indexing to pull out required transition scores
-      # (2, batch_size, max_seq_len - 1)
-      # [
-      #   [
-      #     [w11, w12, w13 ... w_1n-1]
-      #     [w21, w22, w23 ... w_2n-1]
-      #     ...
-      #   ]
-      # --------------- chunk -----------------
-      #   [
-      #     [w12, w13, w14 ... w1n]
-      #     [w22, w23, w24 ... w2n]
-      #     ...
-      #   ]
-      # ]
-      # after chunk, we have two chunks with the shape of (batch_size, max_seq_len - 1)
-      indices = tags_pairs.permute(2, 0, 1).chunk(2)
-     
-      # (batch_size,)
-      trans_score = self.transitionMatrix[indices].squeeze(0).sum(dim=-1)
-
-      # STRAT => 0
-      start_score = self.start_transitions[tags[:, 0]]
-      # n-1 => END 
-      stop_score = self.stop_transitions[tags[:, -1]]
-
-      return feat_score + start_score + trans_score + stop_score
-
-  
-  def _partition_function(self, feats):
-      """
-       feats: 
-        - (batch_size, max_seq_len, num_of_tag)
-      """
-      _, max_seq_len, num_tags = feats.shape
-
-      # (batch_size, num_of_tag)
-      a = feats[:, 0] + self.start_transitions.unsqueeze(0) 
-    
-      # [1, num_of_tag, num_of_tag] from -> to
-      transitions = self.transitionMatrix.unsqueeze(0) 
-      
-      #   previous                      current word
-      # (expand along x_axis)      (expand along y_axis) 
-      # [ x_prev_1              [ x_cur_1, x_cur_2, x_cur_3
-      #   x_prev_2 ...             ...
-      #   x_prev_3 ]            ]
-
-      # transition + previous + current_observation
-      #   O B I
-      # O          a0     O   B   I
-      # B       +  a1  + 
-      # I          a2    
-
-      for i in range(1, max_seq_len):
-        # (batch_size, num_of_tag)
-        a = self._log_sum_exp(transitions + a.unsqueeze(-1) + feats[:, i].unsqueeze(1), 1)
-
-      # (batch_size, num_of_tag) + (1, num_of_tag)
-      return self._log_sum_exp(a + self.stop_transitions.unsqueeze(0), 1)
-
-  
-  def forward(self, feats):
-      """
-      feats: 
-        - (batch_size, max_seq_len, num_of_tag)
-      """
-      _, max_seq_len, num_tags = feats.shape
-
-      '''
-      the first word of all sentencess
-      '''
-      # (batch_size, num_of_tag)
-      pre_score = feats[:, 0] + self.start_transitions.unsqueeze(0)
-     
-      # ([1, num_of_tag, num_of_tag])
-      transitions = self.transitionMatrix.unsqueeze(0)
-     
-      backpointers = []
-      for i in range(1, max_seq_len): # loop each word
-          # broadcast 
-          # (batch_size, num_of_tag, 1)   (1, num_of_tag, num_of_tag)             
-          # pre_score_0                     transitionMatrix
-
-          # pre_score_1              + 
-          
-          # pre_score_2
-          #   ...
-          # pre_score_|num_of_tag|
-          
-          # (batch_size, num_of_tag)
-          pre_score, pre_score_max_idx = (pre_score.unsqueeze(-1) + transitions).max(1)
-
-          # [ (batch_size, num_of_tag), (batch_size, num_of_tag), ..., (batch_size, num_of_tag)]
-          backpointers.append(pre_score_max_idx)
-
-          pre_score = (pre_score + feats[:, i]) 
-
-      # (batch_size, num_of_tag), (batch_size, 1)
-      pre_score, last_best_id = (pre_score + self.stop_transitions.unsqueeze(0)).max(dim=1, keepdim=True)
-
-
-      # [ (batch_size, 1) ]
-      best_path = [last_best_id]
-      for path_pointer in reversed(backpointers): # from the last word
-          # [                                        [
-          #   [1, 2, ... |num_of_tag| ]                [2]     
-          #   [1, 2, ... |num_of_tag| ]   gather       [0]
-          #   [1, 2, ... |num_of_tag| ]                [..]
-          # ]                                        ]
-          # the value in path_pointer indicates the best previous tag_id
-          last_best_id = path_pointer.gather(1, last_best_id)
-          best_path.append(last_best_id)
-
-      best_path.reverse()
-
-      # (batch_size, num_of_tag)
-      return torch.cat(best_path, 1)
-
+from models.BiLSTM_batch import CRF
 
 
 class BiLSTM_CRF_Mult(nn.Module):
@@ -381,7 +163,18 @@ class BiLSTM_CRF_Mult(nn.Module):
       total_embeds = self.dropout(total_embeds)
 
       # (batch_size, max_seq_len, hidden_dim)
-      lstm_out, _ = self.lstm(total_embeds)
+      # lstm_out, _ = self.lstm(total_embeds)
+      seq_len_in_batch_sorted, seq_perm_idx = torch.LongTensor(seq_len_in_batch).sort(0, descending=True)
+      total_embeds_sorted = total_embeds[seq_perm_idx]
+      packed_word_inputs = torch.nn.utils.rnn.pack_padded_sequence(total_embeds_sorted, seq_len_in_batch_sorted, batch_first=True)
+      lstm_word_out, _ = self.lstm(packed_word_inputs)
+      sorted_lstm_out, _ = torch.nn.utils.rnn.pad_packed_sequence(lstm_word_out, batch_first=True)
+     
+      lstm_out = torch.zeros_like(sorted_lstm_out).to(self.device)
+      for i in range(lstm_out.size(0)):
+        lstm_out[seq_perm_idx[i]] = sorted_lstm_out[i]
+
+
     else:
       # (batch_size, max_seq_len, embed_dim)
       embed_words = self.word_embed(inputs)
@@ -398,14 +191,14 @@ class BiLSTM_CRF_Mult(nn.Module):
     return lstm_feats
 
 
-  def crf_decode(self, inputs, seq_len_in_batch=None, from_domain=None):
+  def crf_decode(self, inputs, labels, seq_len_in_batch=None, from_domain=None):
     '''
     inputs: (batch_size, max_seq_len, num_of_tag)
     lengths: (batch_size, )
     '''
     d_crf = self._get_domain_layer(from_domain, 'crf')
 
-    prediction = d_crf(inputs)
+    prediction = d_crf(inputs, labels)
 
     if seq_len_in_batch is not None:
       prediction = [ prediction[i, :length].data.cpu().numpy() 

@@ -94,7 +94,7 @@ def evaluate_batch(
 
     # step 1 prediction
     pre_labels = model( inputs, char_inputs, word_len_in_batch, perm_idx, from_domain=from_domain, seq_len_in_batch=seq_len_in_batch )
-    pre_labels = model.crf_decode( pre_labels, from_domain=from_domain ) # return padded tag_ids
+    pre_labels = model.crf_decode( pre_labels, labels, from_domain=from_domain ) # return padded tag_ids
 
 
     # for each sentence, 

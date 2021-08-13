@@ -5,8 +5,7 @@ from utils import utils
 if __name__ == '__main__':
   print('=== leave-one-domain-out ===')
 
-  data_summary = utils.read_json('./data/data_summary.json')
-  domains = [ d for d in data_summary['genres'].keys() if d != 'pt']  # we don't include 'pt'
+  domains = [ 'bc', 'bn', 'nw', 'mz', 'tc', 'wb' ]
 
   for cur_genre in domains:
     remaining_domains = [ d for d in domains if d != cur_genre]
@@ -30,7 +29,7 @@ if __name__ == '__main__':
     # merge 'train&test'
     X = []
     y = []
-    for dtype in ['train', 'test']:
+    for dtype in ['train']:
       for other_domain in remaining_domains:
         d_sent = utils.read_text(os.path.join('./data', other_domain, dtype, 'sentences.txt'))
         X += d_sent
