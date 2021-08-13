@@ -1,10 +1,12 @@
 # https://www.cyberciti.biz/faq/find-command-exclude-ignore-files/
-find ./data -maxdepth 1 ! -name 'glove.6B' ! -name 'glove.6B.zip' ! -name 'toy' ! -name 'SafeSend-u6etyJgw6CwkFGXt' ! -name 'SafeSend-u6etyJgw6CwkFGXt.zip'  ! -path './data' -exec rm -r '{}' +
+find ./data -maxdepth 1 ! -name 'splits' ! -name 'glove.6B' ! -name 'glove.6B.zip' ! -name 'toy' ! -name 'SafeSend-u6etyJgw6CwkFGXt' ! -name 'SafeSend-u6etyJgw6CwkFGXt.zip'  ! -path './data' -exec rm -r '{}' +
 
-python clean_onto_dataset.py
+# python clean_onto_dataset.py
 
 # split train, valid, test for each domain
-python split_onto_dataset.py
+# python split_onto_dataset.py
+
+python clean_split_standard.py
 
 # create data profile
 # inDomain
