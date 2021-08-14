@@ -17,8 +17,8 @@ def main(domain, split_type, sent_len_threshold):
   sent_len = np.array([ len( sent.split() ) for sent in df_sents['sentences'] ])
   sent_len_threshold = [ int(v) for v in sent_len_threshold.split(',')]
 
-  for i, v in enumerate(sen_len_threshold[:-1]):
-    next_v = sen_len_threshold[ i + 1 ]
+  for i, v in enumerate(sent_len_threshold[:-1]):
+    next_v = sent_len_threshold[ i + 1 ]
     sub_sentences = df_sents['sentences'][ (sent_len < next_v) & (sent_len >= v) ].tolist() # python list
     sub_labels = df_labels['labels'][ (sent_len < next_v) & (sent_len >= v) ].tolist() # python list
 
