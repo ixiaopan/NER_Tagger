@@ -7,7 +7,7 @@ from utils import utils
 parser = argparse.ArgumentParser()
 parser.add_argument('--domain', default='nw', help="domain name")
 parser.add_argument('--split_type', default='test', help="train/valid/test")
-parser.add_argument('--sent_len_threshold', default='2,6,10,58,9999', help="breakpoints of sent length")
+parser.add_argument('--sent_len_threshold', default='2,4,6,10,58,9999', help="breakpoints of sent length")
 
 
 def main(domain, split_type, sent_len_threshold):
