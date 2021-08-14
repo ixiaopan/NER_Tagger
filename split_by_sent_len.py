@@ -5,9 +5,9 @@ import pandas as pd
 from utils import utils
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--domain', default='wb', help="domain name")
+parser.add_argument('--domain', default='nw', help="domain name")
 parser.add_argument('--split_type', default='test', help="train/valid/test")
-parser.add_argument('--sent_len_threshold', default='10,30,60', help="breakpoints of sent length")
+parser.add_argument('--sent_len_threshold', default='2,6,10,58,9999', help="breakpoints of sent length")
 
 
 def main(domain, split_type, sent_len_threshold):
@@ -15,19 +15,15 @@ def main(domain, split_type, sent_len_threshold):
   df_labels = utils.load_sentences(domain, split_type, col_name='labels')
 
   sent_len = np.array([ len( sent.split() ) for sent in df_sents['sentences'] ])
-
-  prev_len = 0
   sent_len_threshold = [ int(v) for v in sent_len_threshold.split(',')]
-  if sent_len_threshold[-1] < max(sent_len):
-    sent_len_threshold.append(max(sent_len))
 
-  for v in sent_len_threshold:
-    sub_sentences = df_sents['sentences'][ (sent_len<=v) & (sent_len > prev_len) ].tolist() # python list
-    sub_labels = df_labels['labels'][ (sent_len<=v) & (sent_len > prev_len) ].tolist() # python list
-    prev_len = v
+  for i, v in enumerate(sen_len_threshold[:-1]):
+    next_v = sen_len_threshold[ i + 1 ]
+    sub_sentences = df_sents['sentences'][ (sent_len < next_v) & (sent_len >= v) ].tolist() # python list
+    sub_labels = df_labels['labels'][ (sent_len < next_v) & (sent_len >= v) ].tolist() # python list
 
     assert len(sub_labels) == len(sub_sentences)
-    print(v, '-->', len(sub_labels))
+    print('[{}, {})'.format(v, next_v), '-->', len(sub_labels))
 
     utils.save_text(os.path.join('./data', domain, 'test_sent_'+str(v), 'sentences.txt'), sub_sentences)
     utils.save_text(os.path.join('./data', domain, 'test_sent_'+str(v), 'labels.txt'), sub_labels)
