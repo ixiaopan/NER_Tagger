@@ -162,7 +162,7 @@ def clean_ontonotes_data(min_seq_len=2, min_word_len=1):
             ner_tag = named_entities_per_sent[i]
            
             # fix label => some tags are wrong '.'=>I-PER should be O
-            if word == '.' and ner_tag != 'O':
+            if word in ['.', '--', "'s"] and ner_tag != 'O':
               ner_tag = 'O'
 
             line = [
