@@ -1,3 +1,4 @@
+from operator import pos
 import re
 import numpy as np
 import os
@@ -158,12 +159,18 @@ def clean_ontonotes_data(min_seq_len=2, min_word_len=1):
             # Sentence: 1,Thousands,NNS,O
             # ,of,IN,O
             pos_tag = pos_in_sent[i]
+            ner_tag = named_entities_per_sent[i]
+           
+            # fix label => some tags are wrong '.'=>I-PER should be O
+            if word == '.' and ner_tag != 'O':
+              ner_tag = 'O'
+
             line = [
               'Sentence {}'.format(total_sent_count_in_genre) if i == 0 else '', 
               # because the default separater in '.csv' is comma, we need to quote them to avoid error
               '"' + word + '"' if ',' in word else word, 
               '"' + pos_tag + '"'  if ',' in pos_tag else pos_tag, 
-              named_entities_per_sent[i]
+              ner_tag
             ]
 
             genre_corpus.append(line)
