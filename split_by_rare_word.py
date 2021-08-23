@@ -17,7 +17,7 @@ def cal_word_freq(corpus):
     words = []
     for sent in corpus:
       for w in sent.split():
-          words.append(w)
+          words.append(w.lower())
 
     w_freq = nltk.FreqDist(words)
 
@@ -72,7 +72,7 @@ def main(domain, split_type, freq_threshold):
       for k, v in rare_words_mapping.items():
         found = False
         for w in set( sent.split() ): # each unique word
-          if w in v['words']:
+          if w.lower() in v['words']:
             sentences[k].append(sent)
             labels[ k ].append( df_labels['labels'][i] )
             found = True

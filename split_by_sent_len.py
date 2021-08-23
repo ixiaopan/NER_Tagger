@@ -3,6 +3,7 @@ import argparse
 import numpy as np
 import pandas as pd
 from utils import utils
+import string
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--domain', default='nw', help="domain name")
@@ -14,7 +15,15 @@ def main(domain, split_type, sent_len_threshold):
   df_sents = utils.load_sentences(domain, split_type, col_name='sentences')
   df_labels = utils.load_sentences(domain, split_type, col_name='labels')
 
-  sent_len = np.array([ len( sent.split() ) for sent in df_sents['sentences'] ])
+  sent_len = []
+  for sent in df_sents['sentences']:
+    sent_words = sent.split()    
+    if sent_words[-1] in string.punctuation:
+      sent_len.append( len(sent_words) - 1 )
+    else:
+      sent_len.append( len(sent_words) )
+
+  sent_len = np.array(sent_len)
   sent_len_threshold = [ int(v) for v in sent_len_threshold.split(',')]
 
   for i, v in enumerate(sent_len_threshold[:-1]):

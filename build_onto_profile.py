@@ -20,7 +20,7 @@ if __name__ == '__main__':
   
   utils.build_ner_profile(
     args.data_dir, 
-    min_word_freq=args.min_word_freq, 
+    min_word_freq=int(args.min_word_freq), 
     use_char_embed=args.use_char_embed,
     use_pre_trained=args.use_pre_trained,
     glove_word_dim=int(args.glove_word_dim),

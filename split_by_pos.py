@@ -9,8 +9,8 @@ from utils import utils
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--domain', default='tc', help="domain name")
-parser.add_argument('--pos', default='IN', help="which pos to study")
-parser.add_argument('--breakpoint', default='0,2,4,6,10,999', help="breakpoints of pos count")
+parser.add_argument('--pos', default='IN-TO', help="which pos to study")
+parser.add_argument('--breakpoint', default='0,1,2,3,4,6,999', help="breakpoints of pos count")
 
 
 def main(domain='tc', pos_list=None, breakpoint=None):
@@ -29,7 +29,7 @@ def main(domain='tc', pos_list=None, breakpoint=None):
 
     pos_mapping = {
       'VB-VBD-VBG-VBN-VBP-VBZ': 'verb',
-      'IN': 'prep'
+      'IN-TO': 'prep'
     }
 
     pos_in_corpus = []
@@ -66,7 +66,6 @@ def main(domain='tc', pos_list=None, breakpoint=None):
     df_sents = utils.load_sentences(domain, 'test', col_name='sentences')
     df_labels = utils.load_sentences(domain, 'test', col_name='labels')
 
-    sent_len = np.array([ len( sent.split() ) for sent in df_sents['sentences'] ])
     breakpoint = [ int(v) for v in breakpoint.split(',')]
 
     for i, v in enumerate(breakpoint[:-1]):

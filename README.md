@@ -54,7 +54,7 @@
 ### Baseline
 
 ```bash
-~ sh baseline.sh 'bc'
+~ sh baseline.sh
 
 # or step train_eval
 ~ python batch_train_baseline.py --train_data_dir='./data/bc'
@@ -64,7 +64,7 @@
 
 ### Pool
 ```bash
-~ sh pool.sh 'bc'
+~ sh pool.sh
 
 # or step train_eval, data pooling aggregated data from leave-one-domain-out domains
 ~ python batch_train_baseline.py --train_data_dir='./data/pool_bc' --model_param_dir='./experiments/pool_bc'
@@ -92,6 +92,13 @@
 ~ python split_by_sent_len.py --domain='nw'
 
 ~ python batch_eval_baseline.py --data_dir='./data/nw' --split_type='test_sent_2' --model_param_dir=$model_param_dir
+```
+
+### Exper III
+
+```bash
+~ python clean_split_standard.py
+~ python build_onto_profile.py --data_dir='./data/pool' --min_word_freq=3
 ```
 
 

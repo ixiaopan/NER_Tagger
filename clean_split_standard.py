@@ -39,6 +39,11 @@ def clean_ontonotes_data(min_seq_len=2, min_word_len=1):
     },
   }
 
+  modal_particles = [ 'yeah', 'Nope', 'the-', 'oh', 'ha', 'yes', 'aw', 
+                   '%eh',  'mil-', '%um', '%huh', '%ah', 'mhm', 'Wow', 'g-'
+                   'yep', '%mm',  '%uh', 'god', 'Th-', 'An-', 
+                   'a-', 'uh-oh', 'uh-huh', 't-', 'o-',  'gosh', 'okay',  '%hm', 'ha-', 'yup']
+
 
 
   file_content_list = list(data.values())
@@ -151,6 +156,15 @@ def clean_ontonotes_data(min_seq_len=2, min_word_len=1):
             # if the word is exactly '"', it will cause error due to empty string
             word = re.sub('"', '', word) # conficts with the '"' below
             word = utils.zero_digit(word) # replace all digits with a single 0
+
+
+            # improve cleaning - for exper 3
+            if word in ['-LRB-', 'End', '-RRB-', '--']:
+              word = ''
+            # there are so many interjections in TC - for exper 3
+            if word in modal_particles or word.lower() in modal_particles:
+              word = ''
+
 
             # skip meaningless words
             if len(word) < min_word_len:
