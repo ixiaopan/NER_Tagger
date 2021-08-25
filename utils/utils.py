@@ -491,9 +491,12 @@ def build_ner_profile(
 
 
   # step 3
-  # for option 1, if min_word_freq>1, this will remove many GloVe words that are not presented in the corpus
-  # for now, we only consider option 2
   vocab = [ w for w, c in split['train_word_counter'].items() if c >= min_word_freq ]
+  # exclude uncommon words that are not present in glove either
+  # for w, c in split['train_word_counter'].items():
+  #   if c < min_word_freq and w in glove_words.keys():
+  #     vocab.append(w)
+      
 
 
   # for batch version

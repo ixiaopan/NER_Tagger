@@ -2,6 +2,7 @@ from operator import pos
 import re
 import numpy as np
 import os
+import string
 
 from utils import utils
 
@@ -39,10 +40,10 @@ def clean_ontonotes_data(min_seq_len=2, min_word_len=1):
     },
   }
 
-  modal_particles = [ 'yeah', 'Nope', 'the-', 'oh', 'ha', 'yes', 'aw', 
-                   '%eh',  'mil-', '%um', '%huh', '%ah', 'mhm', 'Wow', 'g-'
-                   'yep', '%mm',  '%uh', 'god', 'Th-', 'An-', 
-                   'a-', 'uh-oh', 'uh-huh', 't-', 'o-',  'gosh', 'okay',  '%hm', 'ha-', 'yup']
+  modal_particles = [ 'Yeah', 'yeah', 'Nope', 'nope', 'Yes', 'yes', 'oh', 'Oh', 'ha', 'Ha', 'aw', 
+                   '%eh', 'eh', 'mil-', '%um', 'um', 'er', '%huh', '%ah', 'Ah', 'ah', 'mhm', 'Wow', 'wow', 'gosh', 'okay', 'Okay',
+                   'uh','Yep', 'yep','yup', 'Yup', '%hm', '%mm', 'mm', '%uh', 'uh-oh', 'uh-huh',
+                   'a-', 's-', 'i-', 'c-', 'w-', 'y-', 'd-', 'm-', 'k-', 't-', 'o-', 'the-', 'Th-', 'An-', 'g-',  'ha-']
 
 
 
@@ -146,7 +147,8 @@ def clean_ontonotes_data(min_seq_len=2, min_word_len=1):
                   named_entities_per_sent[idx] = ('B-' if i == 0 else 'I-' ) + ne_type
 
  
-          # save      
+          # save
+          sent_start_flag = True
           for i, word in enumerate(tokens_in_sent): # a token per sentence
             total_tokens_count_in_genre += 1
 
@@ -160,15 +162,22 @@ def clean_ontonotes_data(min_seq_len=2, min_word_len=1):
 
             # improve cleaning - for exper 3
             if word in ['-LRB-', 'End', '-RRB-', '--']:
-              word = ''
-            # there are so many interjections in TC - for exper 3
-            if word in modal_particles or word.lower() in modal_particles:
-              word = ''
+              continue
+
+            # remove interjections occuring in the sentences in TC - for exper 3
+            # don't remove sentences like "okay ."
+            if ( not sent_start_flag ) and (word in modal_particles or word.lower() in modal_particles):
+              continue
+
+             # remove words start with punctuations
+            if sent_start_flag and word in string.punctuation:
+              continue
 
 
             # skip meaningless words
             if len(word) < min_word_len:
               continue
+           
 
             # Sentence: 1,Thousands,NNS,O
             # ,of,IN,O
@@ -180,12 +189,16 @@ def clean_ontonotes_data(min_seq_len=2, min_word_len=1):
               ner_tag = 'O'
 
             line = [
-              'Sentence {}'.format(total_sent_count_in_genre) if i == 0 else '', 
+              'Sentence {}'.format(total_sent_count_in_genre) if sent_start_flag else '', 
               # because the default separater in '.csv' is comma, we need to quote them to avoid error
               '"' + word + '"' if ',' in word else word, 
               '"' + pos_tag + '"'  if ',' in pos_tag else pos_tag, 
               ner_tag
             ]
+
+            if sent_start_flag:
+              sent_start_flag = False
+
 
             genre_corpus.append(line)
 
