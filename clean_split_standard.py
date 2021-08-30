@@ -160,14 +160,14 @@ def clean_ontonotes_data(min_seq_len=2, min_word_len=1):
             word = utils.zero_digit(word) # replace all digits with a single 0
 
 
-            # improve cleaning - for exper 3
+            # improve cleaning
             if word in ['-LRB-', 'End', '-RRB-', '--']:
               continue
 
             # remove interjections occuring in the sentences in TC - for exper 3
             # don't remove sentences like "okay ."
-            if ( not sent_start_flag ) and (word in modal_particles or word.lower() in modal_particles):
-              continue
+            # if ( not sent_start_flag ) and (word in modal_particles or word.lower() in modal_particles):
+            #   continue
 
              # remove words start with punctuations
             if sent_start_flag and word in string.punctuation:
